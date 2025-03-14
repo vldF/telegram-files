@@ -61,7 +61,7 @@ public class AutoDownloadVerticle extends AbstractVerticle {
                     vertx.setPeriodic(0, HISTORY_SCAN_INTERVAL,
                             id -> autoRecords.getDownloadEnabledItems()
                                     .stream()
-                                    .filter(auto -> auto.isNotComplete(SettingAutoRecords.HISTORY_DOWNLOAD_STATE))
+                                    .filter(auto -> auto.isDownloadHistoryEnabled() && auto.isNotComplete(SettingAutoRecords.HISTORY_DOWNLOAD_STATE))
                                     .forEach(auto -> addHistoryMessage(auto, System.currentTimeMillis())));
                     vertx.setPeriodic(0, DOWNLOAD_INTERVAL,
                             id -> waitingDownloadMessages.keySet().forEach(this::download));

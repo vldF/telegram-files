@@ -50,6 +50,12 @@ import { Command, CommandGroup, CommandItem, CommandList } from "./ui/command";
 import { cn } from "@/lib/utils";
 import { useMutationObserver } from "@/hooks/use-mutation-observer";
 
+const DEFAULT_RULE: AutoDownloadRule = {
+  query: "",
+  fileTypes: [],
+  downloadHistory: true,
+};
+
 export default function AutoDownloadDialog() {
   const { accountId } = useTelegramAccount();
   const { isLoading, chat, reload } = useTelegramChat();
@@ -58,10 +64,7 @@ export default function AutoDownloadDialog() {
   const [editMode, setEditMode] = useState(false);
   const [downloadEnabled, setDownloadEnabled] = useState(false);
   const [preloadEnabled, setPreloadEnabled] = useState(false);
-  const [rule, setRule] = useState<AutoDownloadRule>({
-    query: "",
-    fileTypes: [],
-  });
+  const [rule, setRule] = useState<AutoDownloadRule>(DEFAULT_RULE);
   const { trigger: triggerAuto, isMutating: isAutoMutating } = useSWRMutation(
     !accountId || !chat
       ? undefined
@@ -102,11 +105,11 @@ export default function AutoDownloadDialog() {
     if (chat?.auto) {
       setDownloadEnabled(chat.auto.downloadEnabled);
       setPreloadEnabled(chat.auto.preloadEnabled);
-      setRule(chat.auto.rule ?? { query: "", fileTypes: [] });
+      setRule(chat.auto.rule ?? DEFAULT_RULE);
     } else {
       setDownloadEnabled(false);
       setPreloadEnabled(false);
-      setRule({ query: "", fileTypes: [] });
+      setRule(DEFAULT_RULE);
     }
   }, [chat]);
 
@@ -224,6 +227,17 @@ export default function AutoDownloadDialog() {
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                      <span className="text-xs font-medium text-gray-500">
+                        Download History
+                      </span>
+                      <Badge>
+                        {chat.auto.rule.downloadHistory
+                          ? "Enabled"
+                          : "Disabled"}
+                      </Badge>
+                    </div>
+
                     {/* Transfer Rule Section */}
                     {chat.auto.rule.transferRule && (
                       <div className="rounded-lg bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
@@ -308,10 +322,7 @@ export default function AutoDownloadDialog() {
                   checked={downloadEnabled}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setRule({
-                        query: "",
-                        fileTypes: [],
-                      });
+                      setRule(DEFAULT_RULE);
                     }
                     setDownloadEnabled(checked);
                   }}
@@ -330,9 +341,9 @@ export default function AutoDownloadDialog() {
                     <div className="flex items-start">
                       <span className="mr-3 mt-1.5 h-3 w-2 flex-shrink-0 rounded-full bg-cyan-400"></span>
                       <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">
-                        Files in historical messages will be downloaded first,
-                        and then files in new messages will be downloaded
-                        automatically.
+                        If you enable download history, the files in historical
+                        messages will be downloaded first, and then files in new
+                        messages will be downloaded automatically.
                       </p>
                     </div>
                     <div className="flex items-start">
@@ -371,7 +382,8 @@ export default function AutoDownloadDialog() {
                     /^[\/\\]?(?:[^<>:"|?*\/\\]+[\/\\]?)*$/;
                   if (
                     rule.transferRule &&
-                    !folderPathRegex.test(rule.transferRule.destination)
+                    (rule.transferRule.destination.length === 0 ||
+                      !folderPathRegex.test(rule.transferRule.destination))
                   ) {
                     toast({
                       title: "Invalid destination folder",
@@ -491,6 +503,26 @@ function AutoDownloadRule({ value, onChange }: AutoDownloadRuleProps) {
                   </Badge>
                 ))}
               </div>
+            </div>
+
+            <div className="rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="download-history">Download History</Label>
+                <Switch
+                  id="download-history"
+                  checked={value.downloadHistory}
+                  onCheckedChange={(checked) =>
+                    onChange({
+                      ...value,
+                      downloadHistory: checked,
+                    })
+                  }
+                />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                If enabled, all historical files will be downloaded. Otherwise,
+                only new files will be downloaded.
+              </p>
             </div>
           </div>
 

@@ -162,5 +162,6 @@ export type TransferRule = {
 export type AutoDownloadRule = {
   query: string;
   fileTypes: Array<Exclude<FileType, "media">>;
+  downloadHistory: boolean;
   transferRule?: TransferRule;
 };

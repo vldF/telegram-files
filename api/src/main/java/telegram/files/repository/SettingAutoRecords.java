@@ -54,15 +54,22 @@ public class SettingAutoRecords {
             return telegramId + ":" + chatId;
         }
 
+        @JsonIgnore
         public void complete(int bitwise) {
             MessyUtils.BitState bitState = new MessyUtils.BitState(state);
             bitState.enableState(bitwise);
             state = bitState.getState();
         }
 
+        @JsonIgnore
         public boolean isNotComplete(int bitwise) {
             MessyUtils.BitState bitState = new MessyUtils.BitState(state);
             return !bitState.isStateEnabled(bitwise);
+        }
+
+        @JsonIgnore
+        public boolean isDownloadHistoryEnabled() {
+            return rule == null || rule.downloadHistory == null || rule.downloadHistory;
         }
     }
 
@@ -71,14 +78,17 @@ public class SettingAutoRecords {
 
         public List<String> fileTypes;
 
+        public Boolean downloadHistory;
+
         public TransferRule transferRule;
 
         public Rule() {
         }
 
-        public Rule(String query, List<String> fileTypes, TransferRule transferRule) {
+        public Rule(String query, List<String> fileTypes, boolean downloadHistory, TransferRule transferRule) {
             this.query = query;
             this.fileTypes = fileTypes;
+            this.downloadHistory = downloadHistory;
             this.transferRule = transferRule;
         }
     }

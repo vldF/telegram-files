@@ -441,7 +441,10 @@ public class TelegramVerticle extends AbstractVerticle {
                         settingAutoRecords = new SettingAutoRecords();
                     }
                     SettingAutoRecords.Rule rule = params.getJsonObject("rule").mapTo(SettingAutoRecords.Rule.class);
-                    if (StrUtil.isBlank(rule.query) && CollUtil.isEmpty(rule.fileTypes) && rule.transferRule == null) {
+                    if (StrUtil.isBlank(rule.query)
+                        && CollUtil.isEmpty(rule.fileTypes)
+                        && rule.downloadHistory == null
+                        && rule.transferRule == null) {
                         rule = null;
                     }
                     boolean downloadEnabled = params.getBoolean("downloadEnabled", false);
