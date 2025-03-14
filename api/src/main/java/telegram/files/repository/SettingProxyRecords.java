@@ -31,7 +31,7 @@ public class SettingProxyRecords {
         public String type;
 
         public boolean equalsTdProxy(TdApi.Proxy proxy) {
-            return Objects.equals(name, proxy.server)
+            return Objects.equals(server, proxy.server)
                    && port == proxy.port
                    && (Objects.equals(type, "http") ? proxy.type instanceof TdApi.ProxyTypeHttp : proxy.type instanceof TdApi.ProxyTypeSocks5);
         }
