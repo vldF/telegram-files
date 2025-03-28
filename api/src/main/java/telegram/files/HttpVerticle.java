@@ -7,7 +7,10 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
-import io.vertx.core.*;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.CookieSameSite;
 import io.vertx.core.http.HttpMethod;
@@ -33,6 +36,7 @@ import telegram.files.repository.SettingRecord;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class HttpVerticle extends AbstractVerticle {
 
@@ -43,6 +47,8 @@ public class HttpVerticle extends AbstractVerticle {
 
     // session id -> telegram verticle
     private final Map<String, TelegramVerticle> sessionTelegramVerticles = new ConcurrentHashMap<>();
+
+    private final List<String> unboundClients = new ArrayList<>();
 
     private final FileRouteHandler fileRouteHandler = new FileRouteHandler();
 
@@ -152,11 +158,14 @@ public class HttpVerticle extends AbstractVerticle {
 
         router.get("/:telegramId/file/:uniqueId").handler(this::handleFilePreview);
         router.post("/:telegramId/file/start-download").handler(this::handleFileStartDownload);
-        router.post("/:telegramId/file/start-download-multiple").handler(this::handleFileStartDownloadMultiple);
         router.post("/:telegramId/file/cancel-download").handler(this::handleFileCancelDownload);
         router.post("/:telegramId/file/toggle-pause-download").handler(this::handleFileTogglePauseDownload);
         router.post("/:telegramId/file/remove").handler(this::handleFileRemove);
         router.post("/:telegramId/file/update-auto-settings").handler(this::handleAutoSettingsUpdate);
+
+        router.get("/files/count").handler(this::handleFilesCount);
+        router.get("/files").handler(this::handleFiles);
+        router.post("/files/start-download-multiple").handler(this::handleFileStartDownloadMultiple);
 
         router.route()
                 .failureHandler(ctx -> {
@@ -206,6 +215,7 @@ public class HttpVerticle extends AbstractVerticle {
             String telegramId = jsonObject.getString("telegramId");
             EventPayload payload = jsonObject.getJsonObject("payload").mapTo(EventPayload.class);
 
+            Set<String> sentSessionIds = new HashSet<>();
             sessionTelegramVerticles.entrySet().stream()
                     .filter(e -> Objects.equals(Convert.toStr(e.getValue().getId()), telegramId))
                     .map(Map.Entry::getKey)
@@ -214,7 +224,18 @@ public class HttpVerticle extends AbstractVerticle {
                         if (StrUtil.isNotBlank(wsHandlerId)) {
                             vertx.eventBus().send(wsHandlerId, Json.encode(payload));
                         }
+                        sentSessionIds.add(sessionId);
                     });
+
+            unboundClients.forEach(sessionId -> {
+                if (sentSessionIds.contains(sessionId)) {
+                    return;
+                }
+                String wsHandlerId = clients.get(sessionId);
+                if (StrUtil.isNotBlank(wsHandlerId)) {
+                    vertx.eventBus().send(wsHandlerId, Json.encode(payload));
+                }
+            });
         });
 
         vertx.eventBus().consumer(EventEnum.AUTO_DOWNLOAD_UPDATE.address(), message -> {
@@ -231,8 +252,13 @@ public class HttpVerticle extends AbstractVerticle {
                 .onSuccess(ws -> {
                     log.debug("Upgraded to WebSocket. SessionId: %s".formatted(sessionId));
                     clients.put(sessionId, ws.textHandlerID());
-                    if (StrUtil.isNotBlank(telegramId) && !handleTelegramChange(sessionId, telegramId)) {
+                    if (!handleTelegramChange(sessionId, telegramId)) {
                         log.debug("Failed to change telegram verticle. SessionId: %s".formatted(sessionId));
+                    }
+                    if (StrUtil.isBlank(telegramId)) {
+                        unboundClients.add(sessionId);
+                    } else {
+                        unboundClients.remove(sessionId);
                     }
 
                     long timerId = vertx.setPeriodic(30000, id -> {
@@ -245,6 +271,7 @@ public class HttpVerticle extends AbstractVerticle {
                     ws.exceptionHandler(throwable -> log.error("WebSocket error: %s".formatted(throwable.getMessage())));
                     ws.closeHandler(e -> {
                         clients.remove(sessionId);
+                        sessionTelegramVerticles.remove(sessionId);
                         vertx.cancelTimer(timerId);
                         log.debug("WebSocket closed. SessionId: %s".formatted(sessionId));
                     });
@@ -539,26 +566,32 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void handleFileStartDownloadMultiple(RoutingContext ctx) {
-        TelegramVerticle telegramVerticle = TelegramVerticles.getOrElseThrow(ctx.pathParam("telegramId"));
-
         JsonObject jsonObject = ctx.body().asJsonObject();
-        Long chatId = jsonObject.getLong("chatId");
         JsonArray files = jsonObject.getJsonArray("files");
-        if (chatId == null || CollUtil.isEmpty(files)) {
+        if (CollUtil.isEmpty(files)) {
             ctx.fail(400);
             return;
         }
+        Map<Long, List<Object>> groupingByTelegramId = files.stream()
+                .collect(Collectors.groupingBy(f -> ((JsonObject) f).getLong("telegramId")));
 
-        Future.any(files.stream()
-                        .map(f -> {
-                            JsonObject file = (JsonObject) f;
-                            Long messageId = file.getLong("messageId");
-                            Integer fileId = file.getInteger("fileId");
-                            return telegramVerticle.startDownload(chatId, messageId, fileId);
+        Future.all(groupingByTelegramId.entrySet()
+                        .stream()
+                        .flatMap(entry -> {
+                            TelegramVerticle telegramVerticle = TelegramVerticles.getOrElseThrow(entry.getKey());
+
+                            return files.stream()
+                                    .map(f -> {
+                                        JsonObject file = (JsonObject) f;
+                                        Long chatId = file.getLong("chatId");
+                                        Long messageId = file.getLong("messageId");
+                                        Integer fileId = file.getInteger("fileId");
+                                        return telegramVerticle.startDownload(chatId, messageId, fileId);
+                                    });
                         })
-                        .toList())
-                .onSuccess(ctx::json)
-                .onFailure(r -> {
+                        .toList()
+                )
+                .onSuccess(ctx::json).onFailure(r -> {
                     log.error(r, "Failed to start download multiple files");
                     ctx.json(JsonObject.of("error", "Part of the files failed to start download"));
                     ctx.response().setStatusCode(400).end();
@@ -625,6 +658,22 @@ public class HttpVerticle extends AbstractVerticle {
         JsonObject params = ctx.body().asJsonObject();
         telegramVerticle.updateAutoSettings(Convert.toLong(chatId), params)
                 .onSuccess(r -> ctx.end())
+                .onFailure(ctx::fail);
+    }
+
+    private void handleFilesCount(RoutingContext ctx) {
+        DataVerticle.fileRepository.getDownloadStatistics()
+                .onSuccess(ctx::json)
+                .onFailure(ctx::fail);
+    }
+
+    private void handleFiles(RoutingContext ctx) {
+        Map<String, String> filter = new HashMap<>();
+        ctx.request().params().forEach(filter::put);
+        filter.put("search", URLUtil.decode(filter.get("search")));
+
+        FileRecordRetriever.getFiles(0, filter)
+                .onSuccess(ctx::json)
                 .onFailure(ctx::fail);
     }
 

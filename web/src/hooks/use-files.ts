@@ -26,6 +26,10 @@ type FileResponse = {
 };
 
 export function useFiles(accountId: string, chatId: string) {
+  const noAccountSpecified = accountId === "-1" && chatId === "-1";
+  const url = noAccountSpecified
+    ? "/files"
+    : `/telegram/${accountId}/chat/${chatId}/files`;
   const { lastJsonMessage } = useWebsocket();
   const [latestFilesStatus, setLatestFileStatus] = useState<
     Record<
@@ -42,7 +46,7 @@ export function useFiles(accountId: string, chatId: string) {
   >({});
   const [filters, setFilters, clearFilters] = useLocalStorage<FileFilter>(
     "telegramFileListFilter",
-    DEFAULT_FILTERS,
+    { ...DEFAULT_FILTERS, offline: noAccountSpecified },
   );
   const getKey = (page: number, previousPageData: FileResponse) => {
     const params = new URLSearchParams({
@@ -62,7 +66,7 @@ export function useFiles(accountId: string, chatId: string) {
     });
 
     if (page === 0) {
-      return `/telegram/${accountId}/chat/${chatId}/files?${params.toString()}`;
+      return `${url}?${params.toString()}`;
     }
 
     if (!previousPageData) {
@@ -71,7 +75,8 @@ export function useFiles(accountId: string, chatId: string) {
 
     params.set("fromMessageId", previousPageData.nextFromMessageId.toString());
     if (filters.offline && previousPageData.files.length > 0) {
-      const lastFile = previousPageData.files[previousPageData.files.length - 1];
+      const lastFile =
+        previousPageData.files[previousPageData.files.length - 1];
       if (filters.sort === "size") {
         params.set("fromSortField", lastFile!.size.toString());
       } else if (filters.sort === "completion_date") {
@@ -80,7 +85,7 @@ export function useFiles(accountId: string, chatId: string) {
         params.set("fromSortField", lastFile!.date.toString());
       }
     }
-    return `/telegram/${accountId}/chat/${chatId}/files?${params.toString()}`;
+    return `${url}?${params.toString()}`;
   };
 
   const {
@@ -146,6 +151,15 @@ export function useFiles(accountId: string, chatId: string) {
       },
     }));
   }, [lastJsonMessage]);
+
+  useEffect(() => {
+    if (noAccountSpecified && !filters.offline) {
+      setFilters((prev) => ({
+        ...prev,
+        offline: true,
+      }));
+    }
+  }, [filters.offline, noAccountSpecified, setFilters]);
 
   const files = useMemo(() => {
     if (!pages) return [];

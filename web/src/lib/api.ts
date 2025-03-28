@@ -1,5 +1,4 @@
 import { env } from "@/env";
-import { toast } from "@/hooks/use-toast";
 
 export function getApiUrl(): string {
   const url = env.NEXT_PUBLIC_API_URL;

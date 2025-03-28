@@ -353,6 +353,7 @@ export default function FileFilters({
   onFiltersChange,
   clearFilters,
 }: FileFiltersProps) {
+  const noAccountSpecified = telegramId === "-1" && chatId === "-1";
   const [localFilters, setLocalFilters] = useState<FileFilter>(filters);
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -461,24 +462,26 @@ export default function FileFilters({
                   <span className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
                     Filters
                   </span>
-                  <div className="flex items-center space-x-2">
-                    <Label
-                      htmlFor="offline"
-                      className="cursor-pointer text-zinc-500"
-                    >
-                      Offline
-                    </Label>
-                    <Switch
-                      id="offline"
-                      checked={localFilters.offline}
-                      onCheckedChange={(checked) => {
-                        setLocalFilters((prev) => ({
-                          ...prev,
-                          offline: checked,
-                        }));
-                      }}
-                    />
-                  </div>
+                  {!noAccountSpecified && (
+                    <div className="flex items-center space-x-2">
+                      <Label
+                        htmlFor="offline"
+                        className="cursor-pointer text-zinc-500"
+                      >
+                        Offline
+                      </Label>
+                      <Switch
+                        id="offline"
+                        checked={localFilters.offline}
+                        onCheckedChange={(checked) => {
+                          setLocalFilters((prev) => ({
+                            ...prev,
+                            offline: checked,
+                          }));
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </DrawerTitle>
               <DrawerDescription className="mb-3">

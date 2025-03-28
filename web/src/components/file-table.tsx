@@ -82,15 +82,19 @@ export function FileTable({ accountId, chatId }: FileTableProps) {
     trigger: startDownloadMultiple,
     isMutating: startDownloadMultipleMutating,
   } = useSWRMutation(
-    `/${accountId}/file/start-download-multiple`,
+    "/files/start-download-multiple",
     (
       key,
       {
         arg,
       }: {
         arg: {
-          chatId: number;
-          files: Array<{ messageId: number; fileId: number }>;
+          files: Array<{
+            telegramId: number;
+            chatId: number;
+            messageId: number;
+            fileId: number;
+          }>;
         };
       },
     ) => POST(key, arg),
@@ -241,10 +245,11 @@ export function FileTable({ accountId, chatId }: FileTableProps) {
               size="sm"
               onClick={() => {
                 void startDownloadMultiple({
-                  chatId: Number(chatId),
                   files: Array.from(selectedFiles).map((id) => {
                     const file = files.find((f) => f.id === id);
                     return {
+                      telegramId: file?.telegramId ?? 0,
+                      chatId: file?.chatId ?? 0,
                       messageId: file?.messageId ?? 0,
                       fileId: file?.id ?? 0,
                     };

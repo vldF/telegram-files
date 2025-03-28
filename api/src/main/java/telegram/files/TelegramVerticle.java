@@ -5,9 +5,6 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
-import cn.hutool.core.date.DateField;
-import cn.hutool.core.date.DatePattern;
-import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ArrayUtil;
@@ -28,9 +25,10 @@ import org.jooq.lambda.tuple.Tuple2;
 import telegram.files.repository.*;
 
 import java.io.File;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public class TelegramVerticle extends AbstractVerticle {
@@ -171,34 +169,13 @@ public class TelegramVerticle extends AbstractVerticle {
     }
 
     public Future<JsonArray> getChats(Long activatedChatId, String query, boolean archived) {
-        return this.convertChat(telegramChats.getChatList(activatedChatId, query, 100, archived));
+        return TelegramConverter.convertChat(this.telegramRecord.id(), telegramChats.getChatList(activatedChatId, query, 100, archived));
     }
 
     public Future<JsonObject> getChatFiles(long chatId, Map<String, String> filter) {
         boolean offline = Convert.toBool(filter.get("offline"), false);
         if (offline) {
-            return DataVerticle.fileRepository.getFiles(chatId, filter)
-                    .compose(r -> {
-                        long[] messageIds = r.v1.stream().mapToLong(FileRecord::messageId).toArray();
-                        return client.execute(new TdApi.GetMessages(chatId, messageIds))
-                                .map(m -> {
-                                    Map<Long, TdApi.Message> messageMap = Arrays.stream(m.messages)
-                                            .filter(Objects::nonNull)
-                                            .collect(Collectors.toMap(message -> message.id, Function.identity()));
-                                    List<JsonObject> fileRecords = r.v1.stream()
-                                            .map(fileRecord ->
-                                                    this.withSource(fileRecord, messageMap.get(fileRecord.messageId())))
-                                            .filter(Objects::nonNull)
-                                            .toList();
-                                    return Tuple.tuple(fileRecords, r.v2, r.v3);
-                                });
-                    })
-                    .map(tuple -> new JsonObject()
-                            .put("files", tuple.v1)
-                            .put("nextFromMessageId", tuple.v2)
-                            .put("count", tuple.v3)
-                            .put("size", tuple.v1.size())
-                    );
+            return FileRecordRetriever.getFiles(chatId, filter);
         } else {
             TdApi.SearchChatMessages searchChatMessages = new TdApi.SearchChatMessages();
             searchChatMessages.chatId = chatId;
@@ -214,7 +191,7 @@ public class TelegramVerticle extends AbstractVerticle {
                     .compose(foundChatMessages ->
                             DataVerticle.fileRepository.getFilesByUniqueId(TdApiHelp.getFileUniqueIds(Arrays.asList(foundChatMessages.messages)))
                                     .map(fileRecords -> Tuple.tuple(foundChatMessages, fileRecords)))
-                    .compose(this::convertFiles);
+                    .compose(t -> TelegramConverter.convertFiles(this.telegramRecord.id(), t));
         }
     }
 
@@ -509,7 +486,7 @@ public class TelegramVerticle extends AbstractVerticle {
 
         return Future.all(
                         DataVerticle.statisticRepository.getRangeStatistics(StatisticRecord.Type.speed, this.telegramRecord.id(), startTime, endTime)
-                                .map(statisticRecords -> convertRangedSpeedStats(statisticRecords, timeRange)),
+                                .map(statisticRecords -> TelegramConverter.convertRangedSpeedStats(statisticRecords, timeRange)),
                         DataVerticle.fileRepository.getCompletedRangeStatistics(this.telegramRecord.id(), startTime, endTime, timeRange)
                 )
                 .map(r -> new JsonObject()
@@ -826,119 +803,4 @@ public class TelegramVerticle extends AbstractVerticle {
 
     //<-----------------------------convert---------------------------------->
 
-    private Future<JsonArray> convertChat(List<TdApi.Chat> chats) {
-        Map<Long, SettingAutoRecords.Item> enableAutoChats = AutoRecordsHolder.INSTANCE.autoRecords().getItems(this.telegramRecord.id());
-        return Future.succeededFuture(new JsonArray(chats.stream()
-                .map(chat -> {
-                    SettingAutoRecords.Item auto = enableAutoChats.get(chat.id);
-                    return new JsonObject()
-                            .put("id", Convert.toStr(chat.id))
-                            .put("name", chat.id == this.telegramRecord.id() ? "Saved Messages" : chat.title)
-                            .put("type", TdApiHelp.getChatType(chat.type))
-                            .put("avatar", Base64.encode((byte[]) BeanUtil.getProperty(chat, "photo.minithumbnail.data")))
-                            .put("unreadCount", chat.unreadCount)
-                            .put("lastMessage", "")
-                            .put("lastMessageTime", "")
-                            .put("auto", auto);
-                })
-                .toList()
-        ));
-    }
-
-    private Future<JsonObject> convertFiles(Tuple2<TdApi.FoundChatMessages, Map<String, FileRecord>> tuple) {
-        TdApi.FoundChatMessages foundChatMessages = tuple.v1;
-        Map<String, FileRecord> fileRecords = tuple.v2;
-
-        return DataVerticle.settingRepository.<Boolean>getByKey(SettingKey.uniqueOnly)
-                .map(uniqueOnly -> {
-                    if (!uniqueOnly) {
-                        return Arrays.asList(foundChatMessages.messages);
-                    }
-                    return TdApiHelp.filterUniqueMessages(Arrays.asList(foundChatMessages.messages));
-                })
-                .map(messages -> {
-                    List<JsonObject> fileObjects = messages.stream()
-                            .filter(message -> TdApiHelp.FILE_CONTENT_CONSTRUCTORS.contains(message.content.getConstructor()))
-                            .map(message -> {
-                                //TODO Processing of the same file under different accounts
-
-                                return this.withSource(fileRecords.get(TdApiHelp.getFileUniqueId(message)), message);
-                            })
-                            .filter(Objects::nonNull)
-                            .toList();
-                    return new JsonObject()
-                            .put("files", new JsonArray(fileObjects))
-                            .put("count", foundChatMessages.totalCount)
-                            .put("size", fileObjects.size())
-                            .put("nextFromMessageId", foundChatMessages.nextFromMessageId);
-                });
-    }
-
-    private JsonObject withSource(FileRecord fileRecord, TdApi.Message message) {
-        TdApiHelp.FileHandler<? extends TdApi.MessageContent> fileHandler = TdApiHelp.getFileHandler(message)
-                .orElse(null);
-        if (fileHandler == null) {
-            return null;
-        }
-
-        FileRecord source = fileHandler.convertFileRecord(telegramRecord.id());
-        if (fileRecord == null) {
-            fileRecord = source;
-        } else {
-            fileRecord = fileRecord.withSourceField(source.id(), source.downloadedSize());
-        }
-
-        JsonObject fileObject = JsonObject.mapFrom(fileRecord);
-        fileObject.put("formatDate", DateUtil.date(fileObject.getLong("date") * 1000).toString());
-        fileObject.put("extra", fileHandler.getExtraInfo());
-        return fileObject;
-    }
-
-    private List<JsonObject> convertRangedSpeedStats(List<StatisticRecord> statisticRecords, int timeRange) {
-        TreeMap<String, List<JsonObject>> groupedSpeedStats = new TreeMap<>(Comparator.comparing(
-                switch (timeRange) {
-                    case 1, 2 -> (Function<? super String, ? extends DateTime>) time ->
-                            DateUtil.parse(time, DatePattern.NORM_DATETIME_MINUTE_FORMAT);
-                    case 3, 4 -> DateUtil::parseDate;
-                    default -> throw new IllegalStateException("Unexpected value: " + timeRange);
-                }
-        ));
-        for (StatisticRecord record : statisticRecords) {
-            JsonObject data = new JsonObject(record.data());
-            long timestamp = record.timestamp();
-            String time = switch (timeRange) {
-                case 1 ->
-                        MessyUtils.withGrouping5Minutes(DateUtil.toLocalDateTime(DateUtil.date(timestamp))).format(DatePattern.NORM_DATETIME_MINUTE_FORMATTER);
-                case 2 ->
-                        DateUtil.date(timestamp).setField(DateField.MINUTE, 0).toString(DatePattern.NORM_DATETIME_MINUTE_FORMAT);
-                case 3, 4 ->
-                        DateUtil.date(timestamp).setField(DateField.MINUTE, 0).toString(DatePattern.NORM_DATE_FORMAT);
-                default -> throw new IllegalStateException("Unexpected value: " + timeRange);
-            };
-            groupedSpeedStats.computeIfAbsent(time, k -> new ArrayList<>()).add(data);
-        }
-        return groupedSpeedStats.entrySet().stream()
-                .map(entry -> {
-                    JsonObject speedStat = entry.getValue().stream().reduce(new JsonObject()
-                                    .put("avgSpeed", 0)
-                                    .put("medianSpeed", 0)
-                                    .put("maxSpeed", 0)
-                                    .put("minSpeed", 0),
-                            (a, b) -> new JsonObject()
-                                    .put("avgSpeed", a.getLong("avgSpeed") + b.getLong("avgSpeed"))
-                                    .put("medianSpeed", a.getLong("medianSpeed") + b.getLong("medianSpeed"))
-                                    .put("maxSpeed", a.getLong("maxSpeed") + b.getLong("maxSpeed"))
-                                    .put("minSpeed", a.getLong("minSpeed") + b.getLong("minSpeed"))
-                    );
-                    int size = entry.getValue().size();
-                    speedStat.put("avgSpeed", speedStat.getLong("avgSpeed") / size)
-                            .put("medianSpeed", speedStat.getLong("medianSpeed") / size)
-                            .put("maxSpeed", speedStat.getLong("maxSpeed") / size)
-                            .put("minSpeed", speedStat.getLong("minSpeed") / size);
-                    return new JsonObject()
-                            .put("time", entry.getKey())
-                            .put("data", speedStat);
-                })
-                .toList();
-    }
 }

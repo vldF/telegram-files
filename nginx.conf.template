@@ -1,6 +1,8 @@
 worker_processes 1;
 user tf tf;
 
+pid /run/nginx.pid;
+
 events {
     worker_connections 1024;
 }

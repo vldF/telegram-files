@@ -15,3 +15,6 @@ api.log.lck
 !**/.env.example
 
 http-client.private.env.json
+
+docker-compose-*.yaml
+docker-compose-*.yml

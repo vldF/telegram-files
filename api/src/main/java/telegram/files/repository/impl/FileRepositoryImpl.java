@@ -108,9 +108,13 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         Long fromMessageId = Convert.toLong(filter.get("fromMessageId"), 0L);
         int limit = Convert.toInt(filter.get("limit"), 20);
 
-        String whereClause = "chat_id = #{chatId}";
-        Map<String, Object> params = MapUtil.of("chatId", chatId);
+        String whereClause = "1 = 1";
+        Map<String, Object> params = new HashMap<>();
         params.put("limit", limit);
+        if (chatId != 0) {
+            whereClause += " AND chat_id = #{chatId}";
+            params.put("chatId", chatId);
+        }
         if (StrUtil.isNotBlank(search)) {
             whereClause += " AND (file_name LIKE #{search} OR caption LIKE #{search})";
             params.put("search", "%%" + search + "%%");
@@ -308,6 +312,27 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                     return result;
                 })
                 .execute(Map.of("telegramId", telegramId))
+                .map(rs -> rs.size() > 0 ? rs.iterator().next() : JsonObject.of())
+                .onFailure(err -> log.error("Failed to get download statistics: %s".formatted(err.getMessage())));
+    }
+
+    @Override
+    public Future<JsonObject> getDownloadStatistics() {
+        return SqlTemplate
+                .forQuery(sqlClient, """
+                        SELECT COUNT(CASE WHEN download_status = 'downloading' THEN 1 END)                  AS downloading,
+                               COUNT(CASE WHEN download_status = 'completed' THEN 1 END)                    AS completed,
+                               SUM(CASE WHEN download_status = 'completed' THEN downloaded_size ELSE 0 END) AS downloaded_size
+                        FROM file_record
+                        """)
+                .mapTo(row -> {
+                    JsonObject result = JsonObject.of();
+                    result.put("downloading", row.getInteger("downloading"));
+                    result.put("completed", row.getInteger("completed"));
+                    result.put("downloadedSize", Objects.requireNonNullElse(row.getLong("downloaded_size"), 0));
+                    return result;
+                })
+                .execute(Map.of())
                 .map(rs -> rs.size() > 0 ? rs.iterator().next() : JsonObject.of())
                 .onFailure(err -> log.error("Failed to get download statistics: %s".formatted(err.getMessage())));
     }
