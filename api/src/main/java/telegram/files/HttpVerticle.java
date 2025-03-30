@@ -637,12 +637,13 @@ public class HttpVerticle extends AbstractVerticle {
 
         JsonObject jsonObject = ctx.body().asJsonObject();
         Integer fileId = jsonObject.getInteger("fileId");
-        if (fileId == null) {
+        String uniqueId = jsonObject.getString("uniqueId");
+        if (fileId == null && StrUtil.isBlank(uniqueId)) {
             ctx.fail(400);
             return;
         }
 
-        telegramVerticle.removeFile(fileId)
+        telegramVerticle.removeFile(fileId, uniqueId)
                 .onSuccess(r -> ctx.end())
                 .onFailure(ctx::fail);
     }

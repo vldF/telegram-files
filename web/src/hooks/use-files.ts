@@ -41,6 +41,7 @@ export function useFiles(accountId: string, chatId: string) {
         completionDate?: number;
         downloadedSize: number;
         transferStatus?: TransferStatus;
+        removed?: boolean;
       }
     >
   >({});
@@ -130,6 +131,7 @@ export function useFiles(accountId: string, chatId: string) {
           completionDate: undefined,
           downloadedSize: 0,
           transferStatus: "idle",
+          removed: true,
         },
       }));
       return;
@@ -166,6 +168,9 @@ export function useFiles(accountId: string, chatId: string) {
     const files: TelegramFile[] = [];
     pages.forEach((page) => {
       page.files.forEach((file) => {
+        if (file.originalDeleted && latestFilesStatus[file.uniqueId]?.removed) {
+          return;
+        }
         files.push({
           ...file,
           id: latestFilesStatus[file.uniqueId]?.fileId ?? file.id,

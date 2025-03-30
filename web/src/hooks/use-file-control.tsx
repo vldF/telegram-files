@@ -23,7 +23,8 @@ export function useFileControl(file: TelegramFile) {
     );
   const { trigger: removeFile, isMutating: removing } = useSWRMutation(
     `/${file.telegramId}/file/remove`,
-    (key, { arg }: { arg: { fileId: number } }) => POST(key, arg),
+    (key, { arg }: { arg: { fileId: number; uniqueId: string } }) =>
+      POST(key, arg),
   );
 
   const downloadControl = {
@@ -64,8 +65,8 @@ export function useFileControl(file: TelegramFile) {
       }
     },
     remove: (fileId: number) => {
-      if (file && file.downloadStatus === "completed") {
-        void removeFile({ fileId });
+      if (file) {
+        void removeFile({ fileId, uniqueId: file.uniqueId });
       }
     },
     cancelling,

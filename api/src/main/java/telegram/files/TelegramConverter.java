@@ -119,20 +119,27 @@ public class TelegramConverter {
     public static JsonObject withSource(long telegramId, FileRecord fileRecord, TdApi.Message message) {
         TdApiHelp.FileHandler<? extends TdApi.MessageContent> fileHandler = TdApiHelp.getFileHandler(message)
                 .orElse(null);
-        if (fileHandler == null) {
+        if (fileRecord == null && fileHandler == null) {
             return null;
         }
 
-        FileRecord source = fileHandler.convertFileRecord(telegramId);
+        if (fileHandler != null) {
+            FileRecord source = fileHandler.convertFileRecord(telegramId);
+            if (fileRecord == null) {
+                fileRecord = source;
+            } else {
+                fileRecord = fileRecord.withSourceField(source.id(), source.downloadedSize());
+            }
+        }
+
         if (fileRecord == null) {
-            fileRecord = source;
-        } else {
-            fileRecord = fileRecord.withSourceField(source.id(), source.downloadedSize());
+            return null;
         }
 
         JsonObject fileObject = JsonObject.mapFrom(fileRecord);
         fileObject.put("formatDate", DateUtil.date(fileObject.getLong("date") * 1000).toString());
-        fileObject.put("extra", fileHandler.getExtraInfo());
+        fileObject.put("extra", fileHandler == null ? null : fileHandler.getExtraInfo());
+        fileObject.put("originalDeleted", message == null);
         return fileObject;
     }
 }

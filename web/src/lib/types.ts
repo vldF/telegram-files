@@ -56,6 +56,7 @@ export type TelegramFile = {
   hasSensitiveContent: boolean;
   startDate: number;
   completionDate: number;
+  originalDeleted: boolean;
   transferStatus?: TransferStatus;
   extra?: PhotoExtra | VideoExtra;
 

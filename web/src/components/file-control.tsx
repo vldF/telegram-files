@@ -8,16 +8,19 @@ import {
   Pause,
   SquareX,
   StepForward,
+  Unlink,
 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  TooltipWrapper,
 } from "@/components/ui/tooltip";
 import { type ReactNode } from "react";
 import prettyBytes from "pretty-bytes";
 import { AnimatePresence, motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
 
 interface ActionButtonProps {
   tooltipText: string;
@@ -63,6 +66,7 @@ export default function FileControl({
 }) {
   const showDownloadInfo =
     !hovered &&
+    !file.originalDeleted &&
     (file.downloadStatus === "downloading" || file.downloadStatus === "paused");
   const iconSize = isMobile ? "!h-3 !w-3" : "h-4 w-4";
 
@@ -76,6 +80,13 @@ export default function FileControl({
     remove,
     removing,
   } = useFileControl(file);
+
+  const removeBtnProps: ActionButtonProps = {
+    onClick: () => remove(file.id),
+    tooltipText: "Remove",
+    icon: <FileX className={iconSize} />,
+    loading: removing,
+  };
 
   const statusMapping: Record<DownloadStatus, ActionButtonProps[]> = {
     idle: [
@@ -122,17 +133,24 @@ export default function FileControl({
         loading: cancelling,
       },
     ],
-    completed: [
-      {
-        onClick: () => remove(file.id),
-        tooltipText: "Remove",
-        icon: <FileX className={iconSize} />,
-        loading: removing,
-      },
-    ],
+    completed: [removeBtnProps],
   };
 
-  const actionButtons = (
+  const actionButtons = file.originalDeleted ? (
+    <div className="w-full">
+      <div
+        className="flex w-full items-center justify-end space-x-4 md:justify-around md:space-x-2"
+        onClick={(e) => e.preventDefault()}
+      >
+        <TooltipWrapper content="Missing Original Message">
+          <Badge className="bg-yellow-300 text-yellow-900 hover:bg-yellow-400 dark:bg-yellow-800 dark:text-yellow-300 dark:hover:bg-yellow-700">
+            <Unlink className="h-4 w-4" />
+          </Badge>
+        </TooltipWrapper>
+        <ActionButton isMobile={isMobile} {...removeBtnProps} />
+      </div>
+    </div>
+  ) : (
     <div className="w-full">
       <div
         className="flex w-full items-center justify-end space-x-4 md:justify-around md:space-x-2"

@@ -107,6 +107,9 @@ public class FileRecordRetriever {
         Map<String, TdApi.Message> messageMap = new HashMap<>();
 
         for (TdApi.Message message : messages) {
+            if (message == null) {
+                continue;
+            }
             String uniqueId = TdApiHelp.getFileUniqueId(message);
 
             boolean matchesFileRecord = records.stream()

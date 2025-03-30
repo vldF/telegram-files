@@ -377,8 +377,9 @@ public class TelegramVerticle extends AbstractVerticle {
                 .mapEmpty();
     }
 
-    public Future<Void> removeFile(Integer fileId) {
+    public Future<Void> removeFile(Integer fileId, String uniqueId) {
         return client.execute(new TdApi.GetFile(fileId))
+                .otherwise((TdApi.File) null)
                 .compose(file -> DataVerticle.fileRepository
                         .getByUniqueId(file.remote.uniqueId)
                         .map(fileRecord -> Tuple.tuple(file, fileRecord))
@@ -396,16 +397,16 @@ public class TelegramVerticle extends AbstractVerticle {
                         }
                     }
 
-                    if (file.local != null && StrUtil.isNotBlank(file.local.path)) {
+                    if (file != null && file.local != null && StrUtil.isNotBlank(file.local.path)) {
                         return client.execute(new TdApi.DeleteFile(fileId))
                                 .map(file);
                     }
                     return Future.succeededFuture(file);
                 })
-                .compose(file -> DataVerticle.fileRepository.deleteByUniqueId(file.remote.uniqueId).map(file))
+                .compose(file -> DataVerticle.fileRepository.deleteByUniqueId(uniqueId).map(file))
                 .onSuccess(file -> sendEvent(EventPayload.build(EventPayload.TYPE_FILE_STATUS, new JsonObject()
                         .put("fileId", fileId)
-                        .put("uniqueId", file.remote.uniqueId)
+                        .put("uniqueId", uniqueId)
                         .put("removed", true)
                 )))
                 .mapEmpty();
@@ -800,7 +801,4 @@ public class TelegramVerticle extends AbstractVerticle {
                 .put("messageId", message.id)
         );
     }
-
-    //<-----------------------------convert---------------------------------->
-
 }

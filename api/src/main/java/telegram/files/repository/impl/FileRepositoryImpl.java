@@ -460,10 +460,11 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         return getByUniqueId(uniqueId)
                 .compose(record -> {
                     if (record == null
-                        // Because if file transfer is completed,
+                        // Because if file transfer is completed or message is deleted,
                         // the telegram client will detect the file and change the download status to paused
                         || (downloadStatus == FileRecord.DownloadStatus.paused
-                            && record.isTransferStatus(FileRecord.TransferStatus.completed))
+                            && (record.isTransferStatus(FileRecord.TransferStatus.completed)
+                                || record.isDownloadStatus(FileRecord.DownloadStatus.completed)))
                     ) {
                         return Future.succeededFuture(null);
                     }
