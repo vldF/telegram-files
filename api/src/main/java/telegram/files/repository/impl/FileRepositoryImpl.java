@@ -322,7 +322,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 .forQuery(sqlClient, """
                         SELECT COUNT(CASE WHEN download_status = 'downloading' THEN 1 END)                  AS downloading,
                                COUNT(CASE WHEN download_status = 'completed' THEN 1 END)                    AS completed,
-                               SUM(CASE WHEN download_status = 'completed' THEN downloaded_size ELSE 0 END) AS downloaded_size
+                               SUM(CASE WHEN download_status = 'completed' THEN size ELSE 0 END)            AS downloaded_size
                         FROM file_record
                         """)
                 .mapTo(row -> {
