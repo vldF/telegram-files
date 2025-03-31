@@ -124,6 +124,7 @@ export const SettingKeys = [
   "alwaysHide",
   "showSensitiveContent",
   "autoDownloadLimit",
+  "autoDownloadTimeLimited",
   "proxys",
   "avgSpeedInterval",
 ] as const;

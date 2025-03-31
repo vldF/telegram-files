@@ -8,13 +8,16 @@ import cn.hutool.log.LogFactory;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
 import org.jooq.lambda.tuple.Tuple2;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.SettingAutoRecords;
 import telegram.files.repository.SettingKey;
+import telegram.files.repository.SettingTimeLimitedDownload;
 
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -46,6 +49,8 @@ public class AutoDownloadVerticle extends AbstractVerticle {
 
     private int limit = DEFAULT_LIMIT;
 
+    private SettingTimeLimitedDownload timeLimited;
+
     public AutoDownloadVerticle() {
         this.autoRecords = AutoRecordsHolder.INSTANCE.autoRecords();
         AutoRecordsHolder.INSTANCE.registerOnRemoveListener(removedItems -> removedItems.forEach(item ->
@@ -59,20 +64,36 @@ public class AutoDownloadVerticle extends AbstractVerticle {
                 .compose(v -> this.initEventConsumer())
                 .onSuccess(v -> {
                     vertx.setPeriodic(0, HISTORY_SCAN_INTERVAL,
-                            id -> autoRecords.getDownloadEnabledItems()
-                                    .stream()
-                                    .filter(auto -> auto.isDownloadHistoryEnabled() && auto.isNotComplete(SettingAutoRecords.HISTORY_DOWNLOAD_STATE))
-                                    .forEach(auto -> addHistoryMessage(auto, System.currentTimeMillis())));
+                            id -> {
+                                if (!isDownloadTime()) {
+                                    log.debug("Auto download time limited! Skip scan history.");
+                                    return;
+                                }
+                                autoRecords.getDownloadEnabledItems()
+                                        .stream()
+                                        .filter(auto -> auto.isDownloadHistoryEnabled() && auto.isNotComplete(SettingAutoRecords.HISTORY_DOWNLOAD_STATE))
+                                        .forEach(auto -> addHistoryMessage(auto, System.currentTimeMillis()));
+                            });
                     vertx.setPeriodic(0, DOWNLOAD_INTERVAL,
-                            id -> waitingDownloadMessages.keySet().forEach(this::download));
+                            id -> {
+                                if (!isDownloadTime()) {
+                                    log.debug("Auto download time limited! Skip download.");
+                                    return;
+                                }
+                                waitingDownloadMessages.keySet().forEach(this::download);
+                            });
 
                     log.info("""
                             Auto download verticle started!
                             |History scan interval: %s ms
                             |Download interval: %s ms
-                            |Download limit: %s per telegram account!
+                            |Download limit: %s per telegram account! Time limit: %s
                             |Auto chats: %s
-                            """.formatted(HISTORY_SCAN_INTERVAL, DOWNLOAD_INTERVAL, limit, autoRecords.getDownloadEnabledItems().size()));
+                            """.formatted(HISTORY_SCAN_INTERVAL,
+                            DOWNLOAD_INTERVAL,
+                            limit,
+                            Json.encode(timeLimited),
+                            autoRecords.getDownloadEnabledItems().size()));
 
                     startPromise.complete();
                 })
@@ -85,11 +106,15 @@ public class AutoDownloadVerticle extends AbstractVerticle {
     }
 
     private Future<Void> initAutoDownload() {
-        return DataVerticle.settingRepository.<Integer>getByKey(SettingKey.autoDownloadLimit)
-                .onSuccess(limit -> {
-                    if (limit != null) {
-                        this.limit = limit;
+        return Future.all(
+                        DataVerticle.settingRepository.<Integer>getByKey(SettingKey.autoDownloadLimit),
+                        DataVerticle.settingRepository.<SettingTimeLimitedDownload>getByKey(SettingKey.autoDownloadTimeLimited)
+                )
+                .onSuccess(results -> {
+                    if (results.resultAt(0) != null) {
+                        this.limit = results.resultAt(0);
                     }
+                    this.timeLimited = results.resultAt(1);
                 })
                 .onFailure(e -> log.error("Get Auto download limit failed!", e))
                 .mapEmpty();
@@ -99,6 +124,10 @@ public class AutoDownloadVerticle extends AbstractVerticle {
         vertx.eventBus().consumer(EventEnum.SETTING_UPDATE.address(SettingKey.autoDownloadLimit.name()), message -> {
             log.debug("Auto download limit update: %s".formatted(message.body()));
             this.limit = Convert.toInt(message.body(), DEFAULT_LIMIT);
+        });
+        vertx.eventBus().consumer(EventEnum.SETTING_UPDATE.address(SettingKey.autoDownloadTimeLimited.name()), message -> {
+            log.debug("Auto download time limit update: %s".formatted(message.body()));
+            this.timeLimited = (SettingTimeLimitedDownload) SettingKey.autoDownloadTimeLimited.converter.apply((String) message.body());
         });
         vertx.eventBus().consumer(EventEnum.MESSAGE_RECEIVED.address(), message -> {
             log.trace("Auto download message received: %s".formatted(message.body()));
@@ -188,6 +217,22 @@ public class AutoDownloadVerticle extends AbstractVerticle {
         }
 
         return new Tuple2<>(query, fileTypes);
+    }
+
+    private boolean isDownloadTime() {
+        if (timeLimited == null) {
+            return true;
+        }
+        LocalTime now = LocalTime.now();
+
+        LocalTime startTime = LocalTime.parse(timeLimited.startTime);
+        LocalTime endTime = LocalTime.parse(timeLimited.endTime);
+
+        if (startTime.isAfter(endTime)) {
+            return now.isAfter(startTime) || now.isBefore(endTime);
+        } else {
+            return now.isAfter(startTime) && now.isBefore(endTime);
+        }
     }
 
     private boolean isExceedLimit(long telegramId) {

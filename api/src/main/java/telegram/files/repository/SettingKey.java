@@ -17,6 +17,7 @@ public enum SettingKey {
      * Auto download limit for each telegram account
      */
     autoDownloadLimit(Convert::toInt),
+    autoDownloadTimeLimited(value -> new JsonObject(value).mapTo(SettingTimeLimitedDownload.class)),
     proxys(value -> new JsonObject(value).mapTo(SettingProxyRecords.class)),
     /**
      * Interval for calculating average speed, in seconds

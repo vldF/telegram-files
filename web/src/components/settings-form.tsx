@@ -15,6 +15,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { useTelegramAccount } from "@/hooks/use-telegram-account";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { DialogClose, DialogFooter } from "@/components/ui/dialog";
+import TimeRangeSelector from "@/components/ui/time-range-selector";
 
 export default function SettingsForm() {
   const { settings, setSetting, updateSettings } = useSettings();
@@ -130,6 +131,10 @@ export default function SettingsForm() {
                 void setSetting("autoDownloadLimit", e.target.value);
               }}
             />
+            <p className="text-xs text-muted-foreground">
+              The maximum number of files to download per account. <br />
+              This is useful for limiting the number of concurrent downloads.
+            </p>
           </div>
           <div className="flex flex-col space-y-2">
             <Label htmlFor="avg-speed-interval">Avg Speed Interval</Label>
@@ -151,6 +156,39 @@ export default function SettingsForm() {
             <p className="text-xs text-muted-foreground">
               The interval to calculate the average download speed. <br />
               Longer intervals may consume more memory.
+            </p>
+          </div>
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="time-limited">Time Limited</Label>
+            <TimeRangeSelector
+              startRequired={true}
+              endRequired={true}
+              includeSeconds={false}
+              timeRange={
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                settings?.autoDownloadTimeLimited
+                  ? JSON.parse(settings.autoDownloadTimeLimited)
+                  : { startTime: "00:00", endTime: "00:00" }
+              }
+              onTimeRangeChange={(
+                startTime: string | null,
+                endTime: string | null,
+              ) => {
+                void setSetting(
+                  "autoDownloadTimeLimited",
+                  JSON.stringify({
+                    startTime: startTime ?? "00:00",
+                    endTime: endTime ?? "00:00",
+                  }),
+                );
+              }}
+              className="max-w-md"
+            />
+            <p className="text-xs text-muted-foreground">
+              The time range for the download. Start and end times are required.{" "}
+              <br />
+              If you don&#39;t want to set a time range, you can set the start
+              and end to 00:00.
             </p>
           </div>
         </div>
