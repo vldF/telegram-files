@@ -43,7 +43,12 @@ const COLUMNS: Column[] = [
     isVisible: true,
     className: "w-32 text-center",
   },
-  { id: "extra", label: "Extra", isVisible: true, className: "flex-1" },
+  {
+    id: "extra",
+    label: "Extra",
+    isVisible: true,
+    className: "flex-1 max-w-44 lg:max-w-none",
+  },
   {
     id: "actions",
     label: "Actions",

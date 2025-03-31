@@ -16,6 +16,7 @@ type FileCardProps = {
   ref?: React.Ref<HTMLDivElement>;
   file: TelegramFile;
   onFileClick: () => void;
+  layout: "detailed" | "gallery";
 };
 
 export function FileCard({
@@ -25,8 +26,10 @@ export function FileCard({
   ref,
   file,
   onFileClick,
+  layout,
 }: FileCardProps) {
   const { downloadProgress } = useFileSpeed(file);
+  const isGalleryLayout = layout === "gallery";
   return (
     <Card
       ref={ref}
@@ -46,27 +49,42 @@ export function FileCard({
       }}
       onClick={onFileClick}
     >
-      <CardContent className="relative z-20 w-full p-2">
-        <div className="flex items-center gap-4">
-          <FileAvatar file={file} className="h-16 w-16 min-w-16" />
-          <div className="flex-1 overflow-hidden">
-            <FileExtra file={file} rowHeight="s" ellipsis={true}/>
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col justify-start gap-0.5">
-                <span className="text-xs text-muted-foreground">
-                  {prettyBytes(file.size)} • {file.type}
-                </span>
-                <FileStatus file={file} className="justify-start" />
-              </div>
+      <CardContent className="relative z-20 max-h-[340px] w-full p-2">
+        <div
+          className={cn(
+            "flex items-center gap-4",
+            isGalleryLayout && "flex-col justify-center gap-2",
+          )}
+        >
+          <FileAvatar
+            file={file}
+            className={cn(!isGalleryLayout && "h-16 w-16 min-w-16")}
+            isGalleryLayout
+          />
+          {isGalleryLayout ? (
+            <div className="w-5/6">
+              <FileExtra file={file} rowHeight="s" ellipsis={true} />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-hidden">
+              <FileExtra file={file} rowHeight="s" ellipsis={true} />
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col justify-start gap-0.5">
+                  <span className="text-xs text-muted-foreground">
+                    {prettyBytes(file.size)} • {file.type}
+                  </span>
+                  <FileStatus file={file} className="justify-start" />
+                </div>
 
-              <div
-                className="flex items-center justify-end"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <FileControl file={file} isMobile={true} />
+                <div
+                  className="flex items-center justify-end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <FileControl file={file} isMobile={true} />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </CardContent>
     </Card>

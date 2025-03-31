@@ -9,6 +9,7 @@ import type { TelegramFile } from "@/lib/types";
 import { isEqual } from "lodash";
 import FileFilters from "@/components/file-filters";
 import DraggableElement from "@/components/ui/draggable-element";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 interface FileListProps {
   accountId: string;
@@ -21,6 +22,10 @@ export default function FileList({ accountId, chatId }: FileListProps) {
     TelegramFile | undefined
   >();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [layout] = useLocalStorage<"detailed" | "gallery">(
+    "telegramFileLayout",
+    "detailed",
+  );
 
   const {
     filters,
@@ -34,11 +39,24 @@ export default function FileList({ accountId, chatId }: FileListProps) {
 
   const rowVirtual = useWindowVirtualizer({
     count: hasMore ? files.length + 1 : files.length,
-    estimateSize: () => 90,
+    estimateSize: (index) => {
+      const file = files[index];
+      if (!file) {
+        return 90;
+      }
+      if (layout === "detailed") {
+        return 90;
+      }
+      return !file.thumbnail ? 116 : 340;
+    },
     overscan: 5,
     scrollMargin: 0,
     gap: 10,
   });
+
+  useEffect(() => {
+    rowVirtual.measure();
+  }, [layout, rowVirtual]);
 
   useEffect(() => {
     const [lastItem] = [...rowVirtual.getVirtualItems()].reverse();
@@ -134,6 +152,7 @@ export default function FileList({ accountId, chatId }: FileListProps) {
                   setCurrentViewFile(file);
                   setIsDrawerOpen(true);
                 }}
+                layout={layout}
                 {...useFilesProps}
               />
             );

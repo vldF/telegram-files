@@ -6,9 +6,11 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export default function FileAvatar({
+  isGalleryLayout = false,
   file,
   className,
 }: {
+  isGalleryLayout?: boolean;
   file: TelegramFile;
   className?: string;
 }) {
@@ -34,7 +36,11 @@ export default function FileAvatar({
             alt={file.fileName ?? "File thumbnail"}
             width={32}
             height={32}
-            className={cn(className, "rounded object-cover")}
+            className={cn(
+              "rounded object-cover",
+              isGalleryLayout && "h-72 w-auto object-contain",
+              className,
+            )}
           />
         </SpoiledWrapper>
       ) : (

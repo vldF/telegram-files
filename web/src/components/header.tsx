@@ -1,13 +1,5 @@
 "use client";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ChevronsLeftRightEllipsisIcon,
@@ -35,12 +27,11 @@ import useIsMobile from "@/hooks/use-is-mobile";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ThemeToggleButton from "@/components/theme-toggle-button";
+import AccountSelect from "@/components/account-select";
 
 export function Header() {
-  const { isLoading, getAccounts, accountId, account, handleAccountChange } =
-    useTelegramAccount();
+  const useTelegramAccountProps = useTelegramAccount();
   const { connectionStatus, accountDownloadSpeed } = useWebsocket();
-  const accounts = getAccounts("active");
   const isMobile = useIsMobile();
   const [showMore, setShowMore] = useState(false);
 
@@ -54,61 +45,12 @@ export function Header() {
             </Link>
 
             <div className="w-full md:w-auto">
-              <Select value={accountId} onValueChange={handleAccountChange}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Select account ...">
-                    {account ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage
-                            src={`data:image/png;base64,${account.avatar}`}
-                          />
-                          <AvatarFallback>{account.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <span className="max-w-[170px] overflow-hidden truncate">
-                          {account.name}
-                        </span>
-                      </div>
-                    ) : (
-                      `Select account ...`
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {isLoading && (
-                    <SelectItem
-                      value="loading"
-                      disabled
-                      className="flex justify-center"
-                    >
-                      <Ellipsis className="h-4 w-4 animate-pulse" />
-                    </SelectItem>
-                  )}
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage
-                            src={`data:image/png;base64,${account.avatar}`}
-                          />
-                          <AvatarFallback>{account.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{account.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {account.phoneNumber}
-                          </span>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AccountSelect {...useTelegramAccountProps} />
             </div>
 
             {(!isMobile || showMore) && (
               <>
-                <ChatSelect disabled={!accountId} />
+                <ChatSelect disabled={!useTelegramAccountProps.accountId} />
 
                 <AutoDownloadDialog />
               </>
@@ -119,11 +61,11 @@ export function Header() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground max-w-20 overflow-hidden">
+                  <div className="flex max-w-20 items-center gap-2 overflow-hidden text-sm text-muted-foreground">
                     <span className="flex-1 text-nowrap">
                       {`${prettyBytes(accountDownloadSpeed, { bits: true })}/s`}
                     </span>
-                    <CloudDownloadIcon className="flex-shrink-0 h-4 w-4" />
+                    <CloudDownloadIcon className="h-4 w-4 flex-shrink-0" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>

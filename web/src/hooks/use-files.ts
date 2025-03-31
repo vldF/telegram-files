@@ -8,7 +8,7 @@ import {
 import useSWRInfinite from "swr/infinite";
 import { useWebsocket } from "@/hooks/use-websocket";
 import { WebSocketMessageType } from "@/lib/websocket-types";
-import useLocalStorage from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDebounce } from "use-debounce";
 
 const DEFAULT_FILTERS: FileFilter = {

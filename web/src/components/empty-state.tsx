@@ -20,6 +20,7 @@ import useSWR from "swr";
 import prettyBytes from "pretty-bytes";
 import { Card, CardContent } from "./ui/card";
 import { useRouter } from "next/navigation";
+import useIsMobile from "@/hooks/use-is-mobile";
 
 interface EmptyStateProps {
   isLoadingAccount?: boolean;
@@ -111,10 +112,11 @@ interface FileCount {
 function AllFiles() {
   const router = useRouter();
   const { data, error, isLoading } = useSWR<FileCount, Error>(`/files/count`);
+  const isMobile = useIsMobile();
 
   if (error) {
     return (
-      <Card className="mx-auto w-full max-w-md">
+      <Card className="mx-auto mb-8 max-w-5xl">
         <CardContent className="flex items-center justify-center p-6 text-red-500">
           <AlertTriangle className="mr-2" />
           Failed to load file counts
@@ -125,7 +127,7 @@ function AllFiles() {
 
   if (isLoading || !data) {
     return (
-      <Card className="mx-auto w-full max-w-md">
+      <Card className="mx-auto mb-8 max-w-5xl">
         <CardContent className="flex items-center justify-center p-6 text-gray-500">
           <Loader2 className="mr-2 animate-spin" />
           Loading file counts...
@@ -135,7 +137,10 @@ function AllFiles() {
   }
 
   return (
-    <Card className="mx-auto mb-8 max-w-5xl">
+    <Card
+      className="mx-auto mb-8 max-w-5xl"
+      onClick={() => isMobile && router.push("/files")}
+    >
       <CardContent className="flex items-center justify-between p-3">
         <div className="grid grid-cols-3 gap-4">
           <div className="flex items-center justify-center gap-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
@@ -162,13 +167,15 @@ function AllFiles() {
             </span>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => router.push("/files")}
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.push("/files")}
+          >
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

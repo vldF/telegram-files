@@ -37,7 +37,7 @@ function FileName({ file, ellipsis }: FileExtraProps) {
         <Mountain className="h-4 w-4 flex-shrink-0" />
         <span
           className={cn(
-            "overflow-hidden rounded px-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800",
+            "overflow-hidden text-nowrap rounded px-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 lg:text-wrap",
             ellipsis && "line-clamp-1",
           )}
         >
@@ -61,7 +61,7 @@ function FileCaption({ file, rowHeight, ellipsis }: FileExtraProps) {
             <p
               className={cn(
                 (rowHeight !== "l" || ellipsis) && "line-clamp-1",
-                "overflow-hidden text-wrap text-start text-sm px-1",
+                "overflow-hidden text-wrap px-1 text-start text-sm",
               )}
             >
               {file.caption}
@@ -139,7 +139,7 @@ function FileTime({ file }: FileExtraProps) {
       {!isMobile && file.completionDate && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <p className="items-center gap-2 hidden lg:flex">
+            <p className="hidden items-center gap-2 lg:flex">
               <ClockArrowDown className="h-4 w-4" />
               <span className="rounded px-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
                 {formatDistanceToNow(new Date(file.completionDate), {

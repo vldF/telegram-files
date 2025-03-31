@@ -70,7 +70,7 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
           <ChevronsUpDown className="opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[300px] p-0" modal={true}>
         <Command shouldFilter={false}>
           <div className="flex w-full border-b">
             <TooltipWrapper

@@ -1,6 +1,6 @@
 "use client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import useLocalStorage from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Rows2, Rows3, Rows4 } from "lucide-react";
 
 const heightOptions = [
@@ -30,7 +30,8 @@ const heightOptions = [
 export type RowHeight = (typeof heightOptions)[number]["id"];
 
 export const getRowHeightTailwindClass = (rowHeight: RowHeight | undefined) =>
-  heightOptions.find((h) => h.id === rowHeight)?.value ?? heightOptions[1].value;
+  heightOptions.find((h) => h.id === rowHeight)?.value ??
+  heightOptions[1].value;
 
 export const getRowHeightPX = (rowHeight: RowHeight | undefined) =>
   heightOptions.find((h) => h.id === rowHeight)?.px ?? heightOptions[1].px;

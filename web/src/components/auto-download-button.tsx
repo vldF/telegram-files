@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { type TelegramChat } from "@/lib/types";
+import UseIsMobile from "@/hooks/use-is-mobile";
 
 interface AutoDownloadButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -20,6 +21,7 @@ const AutoDownloadButton = React.forwardRef<
   AutoDownloadButtonProps
 >(({ auto, className, ...props }, ref) => {
   const autoEnabled = auto && (auto.downloadEnabled || auto.preloadEnabled);
+  const isMobile = UseIsMobile();
 
   return (
     <TooltipProvider>
@@ -29,6 +31,7 @@ const AutoDownloadButton = React.forwardRef<
             ref={ref}
             className={cn(
               "group relative w-32 cursor-pointer overflow-hidden rounded border bg-background p-1 text-center font-semibold",
+              isMobile && "w-full h-10",
               className,
             )}
             {...props}
