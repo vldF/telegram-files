@@ -45,11 +45,11 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                         INSERT INTO file_record(id, unique_id, telegram_id, chat_id, message_id, media_album_id, date, has_sensitive_content,
                                                 size, downloaded_size,
                                                 type, mime_type,
-                                                file_name, thumbnail, caption, local_path,
+                                                file_name, thumbnail, caption, extra, local_path,
                                                 download_status, start_date, transfer_status)
                         values (#{id}, #{unique_id}, #{telegram_id}, #{chat_id}, #{message_id}, #{media_album_id}, #{date},
                                 #{has_sensitive_content}, #{size}, #{downloaded_size}, #{type},
-                                #{mime_type}, #{file_name}, #{thumbnail}, #{caption}, #{local_path}, #{download_status}, #{start_date},
+                                #{mime_type}, #{file_name}, #{thumbnail}, #{caption}, #{extra}, #{local_path}, #{download_status}, #{start_date},
                                 #{transfer_status})
                         """)
                 .mapFrom(FileRecord.PARAM_MAPPER)

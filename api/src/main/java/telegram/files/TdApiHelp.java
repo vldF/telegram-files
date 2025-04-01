@@ -9,6 +9,7 @@ import cn.hutool.core.convert.TypeConverter;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.ReflectUtil;
 import io.vertx.core.impl.NoStackTraceException;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
 import org.jooq.lambda.tuple.Tuple;
@@ -285,6 +286,7 @@ public class TdApiHelp {
                     null,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "photo.minithumbnail.data")),
                     content.caption.text,
+                    Json.encode(getExtraInfo()),
                     null,
                     "idle",
                     "idle",
@@ -355,6 +357,7 @@ public class TdApiHelp {
                     content.video.fileName,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "video.minithumbnail.data")),
                     content.caption.text,
+                    Json.encode(getExtraInfo()),
                     null,
                     "idle",
                     "idle",
@@ -413,6 +416,7 @@ public class TdApiHelp {
                     content.audio.fileName,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "audio.albumCoverMinithumbnail.data")),
                     content.caption.text,
+                    Json.encode(getExtraInfo()),
                     null,
                     "idle",
                     "idle",
@@ -462,6 +466,7 @@ public class TdApiHelp {
                     content.document.fileName,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "document.minithumbnail.data")),
                     content.caption.text,
+                    Json.encode(getExtraInfo()),
                     null,
                     "idle",
                     "idle",

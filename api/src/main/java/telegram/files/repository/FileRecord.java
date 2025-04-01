@@ -25,6 +25,7 @@ public record FileRecord(int id, //file id will change
                          String fileName,
                          String thumbnail,
                          String caption,
+                         String extra, // extra data for the file
                          String localPath,
                          String downloadStatus, // 'idle' | 'downloading' | 'paused' | 'completed' | 'error'
                          String transferStatus, // 'idle' | 'transferring' | 'completed' | 'error'
@@ -58,6 +59,7 @@ public record FileRecord(int id, //file id will change
                 file_name           VARCHAR(255),
                 thumbnail           VARCHAR(2056),
                 caption             VARCHAR(4096),
+                extra               VARCHAR(4096),
                 local_path          VARCHAR(1024),
                 download_status     VARCHAR(255),
                 transfer_status     VARCHAR(255),
@@ -77,6 +79,9 @@ public record FileRecord(int id, //file id will change
             }),
             MapUtil.entry(new Version("0.1.15"), new String[]{
                     "ALTER TABLE file_record ADD COLUMN media_album_id BIGINT;",
+            }),
+            MapUtil.entry(new Version("0.1.18"), new String[]{
+                    "ALTER TABLE file_record ADD COLUMN extra VARCHAR(4096);",
             })
     ));
 
@@ -108,6 +113,7 @@ public record FileRecord(int id, //file id will change
                     row.getString("file_name"),
                     row.getString("thumbnail"),
                     row.getString("caption"),
+                    row.getString("extra"),
                     row.getString("local_path"),
                     row.getString("download_status"),
                     row.getString("transfer_status"),
@@ -132,6 +138,7 @@ public record FileRecord(int id, //file id will change
                     MapUtil.entry("file_name", r.fileName()),
                     MapUtil.entry("thumbnail", r.thumbnail()),
                     MapUtil.entry("caption", r.caption()),
+                    MapUtil.entry("extra", r.extra()),
                     MapUtil.entry("local_path", r.localPath()),
                     MapUtil.entry("download_status", r.downloadStatus()),
                     MapUtil.entry("transfer_status", r.transferStatus()),
@@ -140,7 +147,7 @@ public record FileRecord(int id, //file id will change
             ));
 
     public FileRecord withSourceField(int id, long downloadedSize) {
-        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, caption, localPath, downloadStatus, transferStatus, startDate, completionDate);
+        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, caption, extra, localPath, downloadStatus, transferStatus, startDate, completionDate);
     }
 
     public boolean isDownloadStatus(DownloadStatus status) {

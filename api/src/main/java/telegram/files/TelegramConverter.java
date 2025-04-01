@@ -8,6 +8,7 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import io.vertx.core.Future;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
@@ -135,10 +136,14 @@ public class TelegramConverter {
         if (fileRecord == null) {
             return null;
         }
+        JsonObject extra = fileRecord.extra() == null ? null : (JsonObject) Json.decodeValue(fileRecord.extra());
+        if (extra == null && fileHandler != null) {
+            extra = fileHandler.getExtraInfo();
+        }
 
         JsonObject fileObject = JsonObject.mapFrom(fileRecord);
         fileObject.put("formatDate", DateUtil.date(fileObject.getLong("date") * 1000).toString());
-        fileObject.put("extra", fileHandler == null ? null : fileHandler.getExtraInfo());
+        fileObject.put("extra", extra);
         fileObject.put("originalDeleted", message == null);
         return fileObject;
     }

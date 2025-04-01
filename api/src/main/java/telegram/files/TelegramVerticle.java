@@ -272,13 +272,8 @@ public class TelegramVerticle extends AbstractVerticle {
                     TdApi.Message message = results.resultAt(1);
                     if (file.local != null) {
                         if (file.local.isDownloadingCompleted) {
-                            return DataVerticle.fileRepository.updateDownloadStatus(
-                                    file.id,
-                                    file.remote.uniqueId,
-                                    file.local.path,
-                                    FileRecord.DownloadStatus.completed,
-                                    System.currentTimeMillis()
-                            ).compose(r -> Future.failedFuture("File is already downloaded successfully"));
+                            return syncFileDownloadStatus(file, message)
+                                    .map(file);
                         }
                         if (file.local.isDownloadingActive) {
                             return Future.failedFuture("File is downloading");
@@ -343,20 +338,7 @@ public class TelegramVerticle extends AbstractVerticle {
                         return Future.failedFuture("File not started downloading");
                     }
                     if (file.local.isDownloadingCompleted) {
-                        return DataVerticle.fileRepository.updateDownloadStatus(
-                                file.id,
-                                file.remote.uniqueId,
-                                file.local.path,
-                                FileRecord.DownloadStatus.completed,
-                                System.currentTimeMillis()
-                        ).compose(r -> {
-                            sendFileStatusHttpEvent(file, r);
-                            if (r == null || r.isEmpty()) {
-                                return Future.failedFuture("File is downloaded completed, but update status failed");
-                            } else {
-                                return Future.failedFuture("File is already downloaded successfully");
-                            }
-                        });
+                        return syncFileDownloadStatus(file, null).mapEmpty();
                     }
                     if (isPaused && !file.local.isDownloadingActive) {
                         return Future.failedFuture("File is not downloading");
@@ -800,5 +782,46 @@ public class TelegramVerticle extends AbstractVerticle {
                 .put("chatId", message.chatId)
                 .put("messageId", message.id)
         );
+    }
+
+    private Future<Void> syncFileDownloadStatus(TdApi.File file, TdApi.Message message) {
+        return DataVerticle.fileRepository
+                .getByUniqueId(file.remote.uniqueId)
+                .compose(fileRecord -> {
+                    if (fileRecord != null) {
+                        return DataVerticle.fileRepository.updateDownloadStatus(
+                                file.id,
+                                file.remote.uniqueId,
+                                file.local.path,
+                                FileRecord.DownloadStatus.completed,
+                                System.currentTimeMillis()
+                        );
+                    }
+
+                    if (message == null) {
+                        return Future.failedFuture("File not found");
+                    }
+
+                    fileRecord = TdApiHelp.getFileHandler(message)
+                            .orElseThrow(() -> new NoStackTraceException("not support message type"))
+                            .convertFileRecord(telegramRecord.id());
+
+                    return DataVerticle.fileRepository.create(fileRecord)
+                            .compose(r -> DataVerticle.fileRepository.updateDownloadStatus(
+                                    file.id,
+                                    file.remote.uniqueId,
+                                    file.local.path,
+                                    FileRecord.DownloadStatus.completed,
+                                    System.currentTimeMillis()
+                            ));
+                })
+                .compose(r -> {
+                    sendFileStatusHttpEvent(file, r);
+                    if (r == null || r.isEmpty()) {
+                        return Future.failedFuture("File is downloaded completed, but update status failed");
+                    } else {
+                        return Future.failedFuture("File is already downloaded successfully");
+                    }
+                });
     }
 }
