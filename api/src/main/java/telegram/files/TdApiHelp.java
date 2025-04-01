@@ -256,6 +256,7 @@ public class TdApiHelp {
             if (thumbnail == null) {
                 return null;
             }
+            FileRecord.DownloadStatus downloadStatus = getDownloadStatus(thumbnail.file);
             return new FileRecord(
                     thumbnail.file.id,
                     thumbnail.file.remote.uniqueId,
@@ -276,7 +277,7 @@ public class TdApiHelp {
                     Json.encode(Map.of("width", thumbnail.width,
                             "height", thumbnail.height)),
                     null,
-                    "idle",
+                    downloadStatus == null ? "idle" : downloadStatus.name(),
                     "idle",
                     System.currentTimeMillis(),
                     null

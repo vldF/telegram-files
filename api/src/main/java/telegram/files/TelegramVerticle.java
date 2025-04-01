@@ -301,20 +301,29 @@ public class TelegramVerticle extends AbstractVerticle {
                 });
     }
 
-    public void downloadThumbnail(Long chatId, Long messageId, FileRecord thumbnailRecord) {
+    public Future<Boolean> downloadThumbnail(Long chatId, Long messageId, FileRecord thumbnailRecord) {
         if (thumbnailRecord == null) {
-            return;
+            return Future.succeededFuture(false);
         }
-        DataVerticle.fileRepository.createIfNotExist(thumbnailRecord)
-                .compose(r -> {
-                    if (!r) {
+        return DataVerticle.fileRepository.createIfNotExist(thumbnailRecord)
+                .compose(created -> {
+                    if (!created) {
                         return DataVerticle.fileRepository.updateFileId(thumbnailRecord.id(), thumbnailRecord.uniqueId());
                     }
                     return Future.succeededFuture();
                 })
-                .compose(ignore -> client.execute(new TdApi.AddFileToDownloads(thumbnailRecord.id(), chatId, messageId, 32)))
-                .onSuccess(ignore -> log.debug("[%s] Download thumbnail: %s".formatted(this.getRootId(), thumbnailRecord.uniqueId())))
-                .mapEmpty();
+                .compose(ignore -> {
+                    if (thumbnailRecord.isDownloadStatus(FileRecord.DownloadStatus.completed)) {
+                        return Future.succeededFuture(false);
+                    }
+                    return client.execute(new TdApi.AddFileToDownloads(thumbnailRecord.id(), chatId, messageId, 32))
+                            .map(true);
+                })
+                .onSuccess(download -> {
+                    if (download) {
+                        log.debug("[%s] Download thumbnail: %s".formatted(this.getRootId(), thumbnailRecord.uniqueId()));
+                    }
+                });
     }
 
     public Future<Void> cancelDownload(Integer fileId) {
