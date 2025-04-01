@@ -232,7 +232,7 @@ the list.
 
 ```shell
 docker run --rm \
-  --entrypoint /bin/bash \
+  --entrypoint /bin/sh \
   -v $(pwd)/data:/app/data \
   -e APP_ROOT=${APP_ROOT:-/app/data} \
   -e TELEGRAM_API_ID=${TELEGRAM_API_ID} \
