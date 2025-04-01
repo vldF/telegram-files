@@ -13,8 +13,6 @@ public interface FileRepository {
 
     Future<Boolean> createIfNotExist(FileRecord fileRecord);
 
-    Future<Map<Integer, FileRecord>> getFiles(long chatId, List<Integer> fileIds);
-
     Future<Tuple3<List<FileRecord>, Long, Long>> getFiles(long chatId, Map<String, String> filter);
 
     Future<Map<String, FileRecord>> getFilesByUniqueId(List<String> uniqueIds);

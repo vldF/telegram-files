@@ -188,9 +188,6 @@ public class TelegramVerticle extends AbstractVerticle {
             return (Objects.equals(filter.get("downloadStatus"), FileRecord.DownloadStatus.idle.name()) ?
                     this.getIdleChatFiles(searchChatMessages, 0) :
                     client.execute(searchChatMessages))
-                    .compose(foundChatMessages ->
-                            DataVerticle.fileRepository.getFilesByUniqueId(TdApiHelp.getFileUniqueIds(Arrays.asList(foundChatMessages.messages)))
-                                    .map(fileRecords -> Tuple.tuple(foundChatMessages, fileRecords)))
                     .compose(t -> TelegramConverter.convertFiles(this.telegramRecord.id(), t));
         }
     }
@@ -285,21 +282,39 @@ public class TelegramVerticle extends AbstractVerticle {
                             .orElseThrow(() -> new NoStackTraceException("not support message type"));
                     FileRecord fileRecord = fileHandler.convertFileRecord(telegramRecord.id());
                     return DataVerticle.fileRepository.createIfNotExist(fileRecord)
-                            .compose(r -> {
-                                if (!r) {
+                            .compose(created -> {
+                                if (!created) {
                                     return DataVerticle.fileRepository.updateFileId(fileRecord.id(), fileRecord.uniqueId());
                                 }
                                 return Future.succeededFuture();
                             })
                             .compose(ignore -> client.execute(new TdApi.AddFileToDownloads(fileId, chatId, messageId, 32)))
-                            .onSuccess(ignore ->
-                                    sendEvent(EventPayload.build(EventPayload.TYPE_FILE_STATUS, new JsonObject()
-                                            .put("fileId", fileId)
-                                            .put("uniqueId", fileRecord.uniqueId())
-                                            .put("downloadStatus", FileRecord.DownloadStatus.downloading)
-                                    ))
-                            );
+                            .onSuccess(ignore -> {
+                                sendEvent(EventPayload.build(EventPayload.TYPE_FILE_STATUS, new JsonObject()
+                                        .put("fileId", fileId)
+                                        .put("uniqueId", fileRecord.uniqueId())
+                                        .put("downloadStatus", FileRecord.DownloadStatus.downloading)
+                                ));
+
+                                downloadThumbnail(chatId, messageId, fileHandler.convertThumbnailRecord(telegramRecord.id()));
+                            });
                 });
+    }
+
+    public void downloadThumbnail(Long chatId, Long messageId, FileRecord thumbnailRecord) {
+        if (thumbnailRecord == null) {
+            return;
+        }
+        DataVerticle.fileRepository.createIfNotExist(thumbnailRecord)
+                .compose(r -> {
+                    if (!r) {
+                        return DataVerticle.fileRepository.updateFileId(thumbnailRecord.id(), thumbnailRecord.uniqueId());
+                    }
+                    return Future.succeededFuture();
+                })
+                .compose(ignore -> client.execute(new TdApi.AddFileToDownloads(thumbnailRecord.id(), chatId, messageId, 32)))
+                .onSuccess(ignore -> log.debug("[%s] Download thumbnail: %s".formatted(this.getRootId(), thumbnailRecord.uniqueId())))
+                .mapEmpty();
     }
 
     public Future<Void> cancelDownload(Integer fileId) {

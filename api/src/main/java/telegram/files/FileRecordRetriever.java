@@ -1,5 +1,6 @@
 package telegram.files;
 
+import cn.hutool.core.util.StrUtil;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
@@ -13,11 +14,14 @@ public class FileRecordRetriever {
     public static Future<JsonObject> getFiles(long chatId, Map<String, String> filter) {
         return DataVerticle.fileRepository.getFiles(chatId, filter)
                 .compose(r -> getTdMessages(r.v1).map(r::concat))
+                .compose(r -> getThumbnails(r.v1).map(r::concat))
                 .map(r -> {
                     Map<String, TdApi.Message> messageMap = r.v4;
+                    Map<String, FileRecord> thumbnailMap = r.v5;
                     List<JsonObject> fileRecords = r.v1.stream()
                             .map(fileRecord -> TelegramConverter.withSource(fileRecord.telegramId(),
                                     fileRecord,
+                                    StrUtil.isBlank(fileRecord.thumbnailUniqueId()) ? null : thumbnailMap.get(fileRecord.thumbnailUniqueId()),
                                     messageMap.get(fileRecord.uniqueId())
                             ))
                             .filter(Objects::nonNull)
@@ -121,5 +125,19 @@ public class FileRecordRetriever {
         }
 
         return messageMap;
+    }
+
+    public static Future<Map<String, FileRecord>> getThumbnails(Collection<FileRecord> fileRecords) {
+        if (fileRecords == null || fileRecords.isEmpty()) {
+            return Future.succeededFuture(Collections.emptyMap());
+        }
+
+        List<String> thumbnailUniqueIds = fileRecords.stream()
+                .map(FileRecord::thumbnailUniqueId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return DataVerticle.fileRepository
+                .getFilesByUniqueId(thumbnailUniqueIds);
     }
 }

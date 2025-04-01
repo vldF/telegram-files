@@ -298,7 +298,7 @@ const MobileControls = ({
   );
 };
 
-const VideoPreview = ({
+const FileVideo = ({
   file,
   onTimeUpdate,
   onVolumeChange,
@@ -568,4 +568,4 @@ const VideoPreview = ({
   );
 };
 
-export default VideoPreview;
+export default FileVideo;

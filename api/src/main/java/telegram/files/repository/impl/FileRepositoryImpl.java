@@ -45,12 +45,12 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                         INSERT INTO file_record(id, unique_id, telegram_id, chat_id, message_id, media_album_id, date, has_sensitive_content,
                                                 size, downloaded_size,
                                                 type, mime_type,
-                                                file_name, thumbnail, caption, extra, local_path,
+                                                file_name, thumbnail, thumbnail_unique_id, caption, extra, local_path,
                                                 download_status, start_date, transfer_status)
                         values (#{id}, #{unique_id}, #{telegram_id}, #{chat_id}, #{message_id}, #{media_album_id}, #{date},
                                 #{has_sensitive_content}, #{size}, #{downloaded_size}, #{type},
-                                #{mime_type}, #{file_name}, #{thumbnail}, #{caption}, #{extra}, #{local_path}, #{download_status}, #{start_date},
-                                #{transfer_status})
+                                #{mime_type}, #{file_name}, #{thumbnail}, #{thumbnail_unique_id}, #{caption}, #{extra}, #{local_path},
+                                #{download_status}, #{start_date}, #{transfer_status})
                         """)
                 .mapFrom(FileRecord.PARAM_MAPPER)
                 .execute(fileRecord)
@@ -72,27 +72,6 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
     }
 
     @Override
-    public Future<Map<Integer, FileRecord>> getFiles(long chatId, List<Integer> fileIds) {
-        if (CollUtil.isEmpty(fileIds)) {
-            return Future.succeededFuture(new HashMap<>());
-        }
-        return SqlTemplate
-                .forQuery(sqlClient, """
-                        SELECT * FROM file_record WHERE chat_id = #{chatId} AND id IN (#{fileIds})
-                        """)
-                .mapTo(FileRecord.ROW_MAPPER)
-                .execute(Map.of("chatId", chatId, "fileIds", StrUtil.join(",", fileIds)))
-                .onFailure(err -> log.error("Failed to get file record: %s".formatted(err.getMessage())))
-                .map(rs -> {
-                    Map<Integer, FileRecord> map = new HashMap<>();
-                    for (FileRecord record : rs) {
-                        map.put(record.id(), record);
-                    }
-                    return map;
-                });
-    }
-
-    @Override
     public Future<Tuple3<List<FileRecord>, Long, Long>> getFiles(long chatId, Map<String, String> filter) {
         String search = filter.get("search");
         String type = filter.get("type");
@@ -108,7 +87,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         Long fromMessageId = Convert.toLong(filter.get("fromMessageId"), 0L);
         int limit = Convert.toInt(filter.get("limit"), 20);
 
-        String whereClause = "1 = 1";
+        String whereClause = "type != 'thumbnail'";
         Map<String, Object> params = new HashMap<>();
         params.put("limit", limit);
         if (chatId != 0) {
@@ -296,7 +275,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                                COUNT(CASE WHEN download_status = 'completed' and type = 'audio' THEN 1 END) AS audio,
                                COUNT(CASE WHEN download_status = 'completed' and type = 'file' THEN 1 END)  AS file
                         FROM file_record
-                        WHERE telegram_id = #{telegramId}
+                        WHERE telegram_id = #{telegramId} and type != 'thumbnail'
                         """)
                 .mapTo(row -> {
                     JsonObject result = JsonObject.of();
@@ -324,6 +303,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                                COUNT(CASE WHEN download_status = 'completed' THEN 1 END)                    AS completed,
                                SUM(CASE WHEN download_status = 'completed' THEN size ELSE 0 END)            AS downloaded_size
                         FROM file_record
+                        WHERE type != 'thumbnail'
                         """)
                 .mapTo(row -> {
                     JsonObject result = JsonObject.of();
@@ -357,6 +337,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                           AND completion_date IS NOT NULL
                           AND completion_date >= #{startTime}
                           AND completion_date <= #{endTime}
+                          AND type != 'thumbnail'
                         GROUP BY time
                         ORDER BY time;
                     """;
@@ -376,6 +357,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                       AND completion_date IS NOT NULL
                       AND completion_date >= #{startTime}
                       AND completion_date <= #{endTime}
+                      AND type != 'thumbnail'
                     GROUP BY time
                     ORDER BY time;
                     """;
@@ -395,6 +377,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                       AND completion_date IS NOT NULL
                       AND completion_date >= #{startTime}
                       AND completion_date <= #{endTime}
+                      AND type != 'thumbnail'
                     GROUP BY time
                     ORDER BY time;
                     """;
@@ -440,7 +423,11 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
     public Future<Integer> countByStatus(long telegramId, FileRecord.DownloadStatus downloadStatus) {
         return SqlTemplate
                 .forQuery(sqlClient, """
-                        SELECT COUNT(*) FROM file_record WHERE telegram_id = #{telegramId} AND download_status = #{downloadStatus}
+                        SELECT COUNT(*)
+                        FROM file_record
+                        WHERE telegram_id = #{telegramId}
+                          AND download_status = #{downloadStatus}
+                          AND type != 'thumbnail'
                         """)
                 .mapTo(rs -> rs.getInteger(0))
                 .execute(Map.of("telegramId", telegramId, "downloadStatus", downloadStatus.name()))

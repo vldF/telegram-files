@@ -45,9 +45,11 @@ export type TelegramFile = {
   chatId: number;
   fileName: string;
   type: FileType;
+  mimeType?: string;
   size: number;
   downloadedSize: number;
   thumbnail?: string;
+  thumbnailFile?: Thumbnail;
   downloadStatus: DownloadStatus;
   date: number;
   formatDate: string;
@@ -75,6 +77,15 @@ export type VideoExtra = {
   height: number;
   duration: number;
   mimeType: string;
+};
+
+export type Thumbnail = {
+  uniqueId: string;
+  mimeType: string;
+  extra: {
+    width: number;
+    height: number;
+  };
 };
 
 export type TDFile = {

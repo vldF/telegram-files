@@ -2,12 +2,12 @@ import type { TelegramFile } from "@/lib/types";
 import { useFileSpeed } from "@/hooks/use-file-speed";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import FileAvatar from "@/components/file-avatar";
 import prettyBytes from "pretty-bytes";
 import FileStatus from "@/components/file-status";
 import FileControl from "@/components/file-control";
 import React from "react";
 import FileExtra from "@/components/file-extra";
+import FileImage from "../file-image";
 
 type FileCardProps = {
   index: number;
@@ -56,7 +56,7 @@ export function FileCard({
             isGalleryLayout && "flex-col justify-center gap-2",
           )}
         >
-          <FileAvatar
+          <FileImage
             file={file}
             className={cn(!isGalleryLayout && "h-16 w-16 min-w-16")}
             isGalleryLayout

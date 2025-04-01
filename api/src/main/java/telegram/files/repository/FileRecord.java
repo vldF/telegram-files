@@ -20,10 +20,11 @@ public record FileRecord(int id, //file id will change
                          boolean hasSensitiveContent,
                          long size, // file size in bytes
                          long downloadedSize, // always 0 from db, should be got from telegram client
-                         String type, // 'photo' | 'video' | 'audio' | 'file'
+                         String type, // 'thumbnail' | 'photo' | 'video' | 'audio' | 'file'
                          String mimeType,
                          String fileName,
                          String thumbnail,
+                         String thumbnailUniqueId, // unique id of the thumbnail, usually the video thumbnail
                          String caption,
                          String extra, // extra data for the file
                          String localPath,
@@ -58,6 +59,7 @@ public record FileRecord(int id, //file id will change
                 mime_type           VARCHAR(255),
                 file_name           VARCHAR(255),
                 thumbnail           VARCHAR(2056),
+                thumbnail_unique_id  VARCHAR(255),
                 caption             VARCHAR(4096),
                 extra               VARCHAR(4096),
                 local_path          VARCHAR(1024),
@@ -82,6 +84,7 @@ public record FileRecord(int id, //file id will change
             }),
             MapUtil.entry(new Version("0.1.18"), new String[]{
                     "ALTER TABLE file_record ADD COLUMN extra VARCHAR(4096);",
+                    "ALTER TABLE file_record ADD COLUMN thumbnail_unique_id VARCHAR(255);",
             })
     ));
 
@@ -112,6 +115,7 @@ public record FileRecord(int id, //file id will change
                     row.getString("mime_type"),
                     row.getString("file_name"),
                     row.getString("thumbnail"),
+                    row.getString("thumbnail_unique_id"),
                     row.getString("caption"),
                     row.getString("extra"),
                     row.getString("local_path"),
@@ -137,6 +141,7 @@ public record FileRecord(int id, //file id will change
                     MapUtil.entry("mime_type", r.mimeType()),
                     MapUtil.entry("file_name", r.fileName()),
                     MapUtil.entry("thumbnail", r.thumbnail()),
+                    MapUtil.entry("thumbnail_unique_id", r.thumbnailUniqueId()),
                     MapUtil.entry("caption", r.caption()),
                     MapUtil.entry("extra", r.extra()),
                     MapUtil.entry("local_path", r.localPath()),
@@ -147,7 +152,7 @@ public record FileRecord(int id, //file id will change
             ));
 
     public FileRecord withSourceField(int id, long downloadedSize) {
-        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, caption, extra, localPath, downloadStatus, transferStatus, startDate, completionDate);
+        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, thumbnailUniqueId, caption, extra, localPath, downloadStatus, transferStatus, startDate, completionDate);
     }
 
     public boolean isDownloadStatus(DownloadStatus status) {

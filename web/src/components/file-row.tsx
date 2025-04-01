@@ -9,8 +9,8 @@ import FileExtra from "@/components/file-extra";
 import FileControl from "@/components/file-control";
 import { type Column } from "./table-column-filter";
 import { useFileSpeed } from "@/hooks/use-file-speed";
-import FileAvatar from "@/components/file-avatar";
 import { Progress } from "@/components/ui/progress";
+import FileImage from "./file-image";
 
 type FileRowProps = {
   index: number;
@@ -52,7 +52,7 @@ export default function FileRow({
         className="flex cursor-pointer items-center justify-center gap-2"
         onClick={onFileClick}
       >
-        <FileAvatar file={file} className={dynamicClass.content} />
+        <FileImage file={file} className={dynamicClass.content} />
       </div>
     ),
     type: (

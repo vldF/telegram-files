@@ -3,14 +3,13 @@ import React, { useEffect, useState } from "react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { LoaderPinwheel, Minimize2 } from "lucide-react";
+import { LoaderPinwheel } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import VideoPreview from "@/components/video-preview";
-import PhotoPreview from "@/components/photo-preview";
+import FileVideo from "@/components/file-video";
 import FileInfo from "@/components/mobile/file-info";
 import { type useFiles } from "@/hooks/use-files";
 import useFileSwitch from "@/hooks/use-file-switch";
+import FileImage from "../file-image";
 
 type FileDrawerProps = {
   open: boolean;
@@ -145,27 +144,11 @@ export default function FileDrawer({
           >
             {viewing ? (
               <div className="relative flex min-h-screen items-center justify-center">
-                <div className="absolute left-2 top-2 z-10">
-                  <Button
-                    onClick={() => setViewing(false)}
-                    variant="ghost"
-                    size="icon"
-                  >
-                    <Minimize2
-                      className={cn(
-                        "h-8 w-8",
-                        file.type === "video" &&
-                          file.downloadStatus === "completed" &&
-                          "text-white",
-                      )}
-                    />
-                  </Button>
-                </div>
                 {file.type === "video" &&
                 file.downloadStatus === "completed" ? (
-                  <VideoPreview file={file} />
+                  <FileVideo file={file} />
                 ) : (
-                  <PhotoPreview file={file} className="h-full" />
+                  <FileImage file={file} className="h-full" isFullPreview />
                 )}
               </div>
             ) : (

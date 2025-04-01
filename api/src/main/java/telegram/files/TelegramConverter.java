@@ -7,12 +7,13 @@ import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.StrUtil;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
-import org.jooq.lambda.tuple.Tuple2;
+import org.jooq.lambda.tuple.Tuple;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.SettingAutoRecords;
 import telegram.files.repository.SettingKey;
@@ -42,24 +43,29 @@ public class TelegramConverter {
         ));
     }
 
-    public static Future<JsonObject> convertFiles(long telegramId, Tuple2<TdApi.FoundChatMessages, Map<String, FileRecord>> tuple) {
-        TdApi.FoundChatMessages foundChatMessages = tuple.v1;
-        Map<String, FileRecord> fileRecords = tuple.v2;
+    public static Future<JsonObject> convertFiles(long telegramId, TdApi.FoundChatMessages foundChatMessages) {
+        return DataVerticle.fileRepository.getFilesByUniqueId(TdApiHelp.getFileUniqueIds(Arrays.asList(foundChatMessages.messages)))
+                .compose(fileRecords ->
+                        FileRecordRetriever.getThumbnails(fileRecords.values())
+                                .map(thumbnails -> Tuple.tuple(fileRecords, thumbnails))
+                )
+                .compose(t -> DataVerticle.settingRepository.<Boolean>getByKey(SettingKey.uniqueOnly).map(t::concat))
+                .map(t -> {
+                    Map<String, FileRecord> fileRecords = t.v1;
+                    Map<String, FileRecord> thumbnails = t.v2;
+                    List<TdApi.Message> messages = t.v3 ? TdApiHelp.filterUniqueMessages(Arrays.asList(foundChatMessages.messages))
+                            : Arrays.asList(foundChatMessages.messages);
 
-        return DataVerticle.settingRepository.<Boolean>getByKey(SettingKey.uniqueOnly)
-                .map(uniqueOnly -> {
-                    if (!uniqueOnly) {
-                        return Arrays.asList(foundChatMessages.messages);
-                    }
-                    return TdApiHelp.filterUniqueMessages(Arrays.asList(foundChatMessages.messages));
-                })
-                .map(messages -> {
                     List<JsonObject> fileObjects = messages.stream()
                             .filter(message -> TdApiHelp.FILE_CONTENT_CONSTRUCTORS.contains(message.content.getConstructor()))
                             .map(message -> {
                                 //TODO Processing of the same file under different accounts
 
-                                return withSource(telegramId, fileRecords.get(TdApiHelp.getFileUniqueId(message)), message);
+                                FileRecord fileRecord = fileRecords.get(TdApiHelp.getFileUniqueId(message));
+                                return withSource(telegramId,
+                                        fileRecord,
+                                        fileRecord == null || StrUtil.isBlank(fileRecord.thumbnailUniqueId()) ? null : thumbnails.get(fileRecord.thumbnailUniqueId()),
+                                        message);
                             })
                             .filter(Objects::nonNull)
                             .toList();
@@ -117,7 +123,10 @@ public class TelegramConverter {
                 .toList();
     }
 
-    public static JsonObject withSource(long telegramId, FileRecord fileRecord, TdApi.Message message) {
+    public static JsonObject withSource(long telegramId,
+                                        FileRecord fileRecord,
+                                        FileRecord thumbnailRecord,
+                                        TdApi.Message message) {
         TdApiHelp.FileHandler<? extends TdApi.MessageContent> fileHandler = TdApiHelp.getFileHandler(message)
                 .orElse(null);
         if (fileRecord == null && fileHandler == null) {
@@ -145,6 +154,16 @@ public class TelegramConverter {
         fileObject.put("formatDate", DateUtil.date(fileObject.getLong("date") * 1000).toString());
         fileObject.put("extra", extra);
         fileObject.put("originalDeleted", message == null);
+
+        // Put thumbnail information
+        if (thumbnailRecord != null) {
+            fileObject.put("thumbnailFile", JsonObject.of(
+                    "uniqueId", thumbnailRecord.uniqueId(),
+                    "mimeType", thumbnailRecord.mimeType(),
+                    "extra", StrUtil.isBlank(thumbnailRecord.extra()) ? null : Json.decodeValue(thumbnailRecord.extra())
+            ));
+        }
+
         return fileObject;
     }
 }

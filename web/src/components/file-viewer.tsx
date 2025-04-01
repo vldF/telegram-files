@@ -1,11 +1,10 @@
 import { type TelegramFile } from "@/lib/types";
-import PhotoPreview from "@/components/photo-preview";
 import React, { useEffect } from "react";
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from "./ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
-import VideoPreview from "./video-preview";
+import FileVideo from "./file-video";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,6 +16,7 @@ import { type useFiles } from "@/hooks/use-files";
 import FileExtra from "@/components/file-extra";
 import { Button } from "@/components/ui/button";
 import useFileSwitch from "@/hooks/use-file-switch";
+import FileImage from "./file-image";
 
 type FileViewerProps = {
   open: boolean;
@@ -156,9 +156,9 @@ export default function FileViewer({
                 </VisuallyHidden>
                 {file.type === "video" &&
                 file.downloadStatus === "completed" ? (
-                  <VideoPreview file={file} />
+                  <FileVideo file={file} />
                 ) : (
-                  <PhotoPreview file={file} />
+                  <FileImage file={file} isFullPreview />
                 )}
               </motion.div>
             </AnimatePresence>

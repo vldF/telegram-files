@@ -5,7 +5,6 @@ import {
   DrawerFooter,
   DrawerHeader,
 } from "@/components/ui/drawer";
-import FileAvatar from "@/components/file-avatar";
 import FileStatus from "@/components/file-status";
 import SpoiledWrapper from "@/components/spoiled-wrapper";
 import { Progress } from "@/components/ui/progress";
@@ -25,6 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { MobileFileControl } from "@/components/file-control";
 import React from "react";
+import FileImage from "../file-image";
 
 export default function FileInfo({
   file,
@@ -38,7 +38,7 @@ export default function FileInfo({
     <>
       <DrawerHeader className="text-center">
         <div className="flex flex-col items-center justify-center gap-1">
-          <FileAvatar file={file} className="w-[calc(100vw-20rem)]" />
+          <FileImage file={file} className="" isGalleryLayout />
           <span className="max-w-64 truncate">{file.fileName}</span>
         </div>
         <div className="py-1">

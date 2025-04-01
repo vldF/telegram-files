@@ -6,14 +6,12 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.convert.TypeConverter;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.ReflectUtil;
-import io.vertx.core.impl.NoStackTraceException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.drinkless.tdlib.TdApi;
-import org.jooq.lambda.tuple.Tuple;
-import org.jooq.lambda.tuple.Tuple1;
 import telegram.files.repository.FileRecord;
 
 import java.util.*;
@@ -90,8 +88,7 @@ public class TdApiHelp {
         return switch (type.getConstructor()) {
             case TdApi.ChatTypePrivate.CONSTRUCTOR -> "private";
             case TdApi.ChatTypeBasicGroup.CONSTRUCTOR -> "group";
-            case TdApi.ChatTypeSupergroup.CONSTRUCTOR ->
-                    ((TdApi.ChatTypeSupergroup) type).isChannel ? "channel" : "group";
+            case TdApi.ChatTypeSupergroup.CONSTRUCTOR -> ((TdApi.ChatTypeSupergroup) type).isChannel ? "channel" : "group";
             case TdApi.ChatTypeSecret.CONSTRUCTOR -> "secret";
             default -> "unknown";
         };
@@ -115,6 +112,22 @@ public class TdApiHelp {
             case TdApi.SearchMessagesFilterVideo.CONSTRUCTOR -> "video";
             case TdApi.SearchMessagesFilterAudio.CONSTRUCTOR -> "audio";
             case TdApi.SearchMessagesFilterDocument.CONSTRUCTOR -> "file";
+            default -> "unknown";
+        };
+    }
+
+    public static String getThumbnailMimeType(TdApi.ThumbnailFormat format) {
+        return switch (format.getConstructor()) {
+            // 图片格式
+            case TdApi.ThumbnailFormatJpeg.CONSTRUCTOR -> "image/jpeg";
+            case TdApi.ThumbnailFormatPng.CONSTRUCTOR -> "image/png";
+            // 动画格式
+            case TdApi.ThumbnailFormatGif.CONSTRUCTOR -> "image/gif";
+            case TdApi.ThumbnailFormatWebp.CONSTRUCTOR -> "image/webp";
+            case TdApi.ThumbnailFormatTgs.CONSTRUCTOR -> "application/x-tgsticker";
+            // 视频格式
+            case TdApi.ThumbnailFormatWebm.CONSTRUCTOR -> "video/webm";
+            case TdApi.ThumbnailFormatMpeg4.CONSTRUCTOR -> "video/mp4";
             default -> "unknown";
         };
     }
@@ -214,10 +227,6 @@ public class TdApiHelp {
 
         public abstract String getFileUniqueId();
 
-        public TdApi.File getPreviewFileId(Tuple tuple) {
-            throw new UnsupportedOperationException("This message type does not support preview file");
-        }
-
         public abstract FileRecord convertFileRecord(long telegramId);
 
         public T getContent() {
@@ -228,6 +237,50 @@ public class TdApiHelp {
 
         public JsonObject getExtraInfo() {
             return JsonObject.of();
+        }
+
+        public TdApi.Thumbnail getThumbnail() {
+            return null;
+        }
+
+        public String getThumbnailFileUniqueId() {
+            TdApi.Thumbnail thumbnail = getThumbnail();
+            if (thumbnail == null) {
+                return null;
+            }
+            return thumbnail.file.remote.uniqueId;
+        }
+
+        public FileRecord convertThumbnailRecord(long telegramId) {
+            TdApi.Thumbnail thumbnail = getThumbnail();
+            if (thumbnail == null) {
+                return null;
+            }
+            return new FileRecord(
+                    thumbnail.file.id,
+                    thumbnail.file.remote.uniqueId,
+                    telegramId,
+                    message.chatId,
+                    message.id,
+                    message.mediaAlbumId,
+                    message.date,
+                    message.hasSensitiveContent,
+                    thumbnail.file.size == 0 ? thumbnail.file.expectedSize : thumbnail.file.size,
+                    thumbnail.file.local == null ? 0 : thumbnail.file.local.downloadedSize,
+                    "thumbnail",
+                    getThumbnailMimeType(thumbnail.format),
+                    null,
+                    null,
+                    null,
+                    null,
+                    Json.encode(Map.of("width", thumbnail.width,
+                            "height", thumbnail.height)),
+                    null,
+                    "idle",
+                    "idle",
+                    System.currentTimeMillis(),
+                    null
+            );
         }
     }
 
@@ -248,26 +301,6 @@ public class TdApiHelp {
         }
 
         @Override
-        public TdApi.File getPreviewFileId(Tuple tuple) {
-            TdApi.MessagePhoto messagePhoto = this.content;
-            String size = ((Tuple1<String>) tuple).v1;
-
-            TdApi.PhotoSize photoSize = Arrays.stream(messagePhoto.photo.sizes)
-                    .map(ComparablePhotoSize::new)
-                    .filter(comparablePhotoSize -> comparablePhotoSize.compareTo(size) <= 0)
-                    .max((o1, o2) -> o2.compareTo(o1.getPhotoSize()))
-                    .map(ComparablePhotoSize::getPhotoSize)
-                    .stream().findFirst()
-                    .orElse(null);
-
-            if (photoSize == null) {
-                throw new NoStackTraceException("The photo no size that less than or equal to " + size);
-            }
-
-            return photoSize.photo;
-        }
-
-        @Override
         public FileRecord convertFileRecord(long telegramId) {
             TdApi.File file = getFile();
             return new FileRecord(
@@ -285,6 +318,7 @@ public class TdApiHelp {
                     null,
                     null,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "photo.minithumbnail.data")),
+                    getThumbnailFileUniqueId(),
                     content.caption.text,
                     Json.encode(getExtraInfo()),
                     null,
@@ -326,19 +360,6 @@ public class TdApiHelp {
         }
 
         @Override
-        public TdApi.File getPreviewFileId(Tuple tuple) {
-            TdApi.MessageVideo messageVideo = this.content;
-            TdApi.Thumbnail thumbnail = messageVideo.video.thumbnail;
-
-            if (thumbnail == null) {
-                throw new NoStackTraceException("Video thumbnail not found");
-            }
-
-            return thumbnail.file;
-        }
-
-
-        @Override
         public FileRecord convertFileRecord(long telegramId) {
             TdApi.File file = getFile();
             return new FileRecord(
@@ -356,6 +377,7 @@ public class TdApiHelp {
                     content.video.mimeType,
                     content.video.fileName,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "video.minithumbnail.data")),
+                    getThumbnailFileUniqueId(),
                     content.caption.text,
                     Json.encode(getExtraInfo()),
                     null,
@@ -378,6 +400,11 @@ public class TdApiHelp {
                     "height", video.height,
                     "duration", video.duration,
                     "mimeType", video.mimeType);
+        }
+
+        @Override
+        public TdApi.Thumbnail getThumbnail() {
+            return content.video.thumbnail;
         }
     }
 
@@ -415,6 +442,7 @@ public class TdApiHelp {
                     content.audio.mimeType,
                     content.audio.fileName,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "audio.albumCoverMinithumbnail.data")),
+                    getThumbnailFileUniqueId(),
                     content.caption.text,
                     Json.encode(getExtraInfo()),
                     null,
@@ -428,6 +456,15 @@ public class TdApiHelp {
         @Override
         public TdApi.File getFile() {
             return content.audio.audio;
+        }
+
+        @Override
+        public TdApi.Thumbnail getThumbnail() {
+            TdApi.Thumbnail thumbnail = content.audio.albumCoverThumbnail;
+            if (thumbnail == null && ArrayUtil.isNotEmpty(content.audio.externalAlbumCovers)) {
+                thumbnail = content.audio.externalAlbumCovers[0];
+            }
+            return thumbnail;
         }
     }
 
@@ -465,6 +502,7 @@ public class TdApiHelp {
                     content.document.mimeType,
                     content.document.fileName,
                     Base64.encode((byte[]) BeanUtil.getProperty(content, "document.minithumbnail.data")),
+                    getThumbnailFileUniqueId(),
                     content.caption.text,
                     Json.encode(getExtraInfo()),
                     null,
@@ -478,6 +516,11 @@ public class TdApiHelp {
         @Override
         public TdApi.File getFile() {
             return content.document.document;
+        }
+
+        @Override
+        public TdApi.Thumbnail getThumbnail() {
+            return content.document.thumbnail;
         }
     }
 
