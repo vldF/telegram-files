@@ -12,13 +12,13 @@ public enum SettingKey {
     imageLoadSize,
     alwaysHide(Convert::toBool, false),
     showSensitiveContent(Convert::toBool, false),
-    autoDownload(value -> new JsonObject(value).mapTo(SettingAutoRecords.class)),
+    autoDownload(value -> value == null ? null : new JsonObject(value).mapTo(SettingAutoRecords.class)),
     /**
      * Auto download limit for each telegram account
      */
     autoDownloadLimit(Convert::toInt),
-    autoDownloadTimeLimited(value -> new JsonObject(value).mapTo(SettingTimeLimitedDownload.class)),
-    proxys(value -> new JsonObject(value).mapTo(SettingProxyRecords.class)),
+    autoDownloadTimeLimited(value -> value == null ? null : new JsonObject(value).mapTo(SettingTimeLimitedDownload.class)),
+    proxys(value -> value == null ? null : new JsonObject(value).mapTo(SettingProxyRecords.class)),
     /**
      * Interval for calculating average speed, in seconds
      */
