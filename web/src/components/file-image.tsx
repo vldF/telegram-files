@@ -13,20 +13,29 @@ import { cn } from "@/lib/utils";
 import { getApiUrl } from "@/lib/api";
 
 const ImageErrorFallback = ({
+  size = "s",
   className = "",
-  message = "Image loading failed！",
 }: {
+  size?: "s" | "m" | "l";
   className?: string;
-  message?: string;
 }) => (
   <div
     className={cn(
-      "flex flex-col items-center justify-center rounded bg-gray-100 p-4",
+      "flex items-center justify-center rounded bg-gray-100",
+      size === "s" && "h-16 w-16",
+      size === "m" && "h-32 w-32",
+      size === "l" && "h-72 w-72",
       className,
     )}
   >
-    <ImageOff className="mb-2 h-8 w-8 text-gray-400" />
-    <p className="text-sm text-gray-500">{message}</p>
+    <ImageOff
+      className={cn(
+        "text-gray-400",
+        size === "s" && "h-4 w-4",
+        size === "m" && "h-8 w-8",
+        size === "l" && "h-16 w-16",
+      )}
+    />
   </div>
 );
 
@@ -92,7 +101,8 @@ export default function FilePreview({
   if (error) {
     return (
       <ImageErrorFallback
-        className={cn("h-full min-h-[200px] w-full", className)}
+        className={cn(className)}
+        size={isFullPreview || isGalleryLayout ? "l" : "s"}
       />
     );
   }
@@ -126,7 +136,7 @@ export default function FilePreview({
           placeholder="blur"
           unoptimized={true}
           blurDataURL={`data:image/jpeg;base64,${file.thumbnail}`}
-          alt={file.fileName ?? "文件预览"}
+          alt={file.fileName ?? "File Image"}
           width={calculatedWidth}
           height={calculatedHeight}
           className={imageClasses}

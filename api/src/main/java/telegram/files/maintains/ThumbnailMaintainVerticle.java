@@ -96,7 +96,7 @@ public class ThumbnailMaintainVerticle extends MaintainVerticle {
             log.error("🔨 Thumbnail download timeout, %d thumbnails are still downloading".formatted(downloadingThumbnailUniqueIds.size()));
             super.end(false, new RuntimeException("Thumbnail download timeout"));
         }
-        if (!scanning && downloadingThumbnailUniqueIds.size() < lastDownloadingCount) {
+        if (!scanning && downloadingThumbnailUniqueIds.size() != lastDownloadingCount) {
             lastDownloadingCount = downloadingThumbnailUniqueIds.size();
             lastTime = System.currentTimeMillis();
         }
@@ -116,8 +116,8 @@ public class ThumbnailMaintainVerticle extends MaintainVerticle {
                     return;
                 }
                 String thumbnailUniqueId = (String) data.get("uniqueId");
-                if (downloadingThumbnailUniqueIds.containsKey(thumbnailUniqueId)
-                    && updateThumbnailUniqueId(downloadingThumbnailUniqueIds.get(thumbnailUniqueId), thumbnailUniqueId)) {
+                if (downloadingThumbnailUniqueIds.containsKey(thumbnailUniqueId)) {
+                    updateThumbnailUniqueId(downloadingThumbnailUniqueIds.get(thumbnailUniqueId), thumbnailUniqueId);
                     downloadingThumbnailUniqueIds.remove(thumbnailUniqueId);
                 }
             }
@@ -158,8 +158,8 @@ public class ThumbnailMaintainVerticle extends MaintainVerticle {
         }
     }
 
-    private boolean updateThumbnailUniqueId(String uniqueId, String thumbnailUniqueId) {
-        return Future.await(SqlTemplate.forUpdate(DataVerticle.pool, """
+    private void updateThumbnailUniqueId(String uniqueId, String thumbnailUniqueId) {
+        SqlTemplate.forUpdate(DataVerticle.pool, """
                         UPDATE file_record
                         SET thumbnail_unique_id = #{thumbnailUniqueId}
                         WHERE unique_id = #{uniqueId}
@@ -168,7 +168,6 @@ public class ThumbnailMaintainVerticle extends MaintainVerticle {
                         MapUtil.entry("uniqueId", uniqueId),
                         MapUtil.entry("thumbnailUniqueId", thumbnailUniqueId)
                 ))
-                .onFailure(err -> log.error(err, "🔨 Failed to update thumbnail unique id: %s".formatted(uniqueId)))
-                .map(true));
+                .onFailure(err -> log.error(err, "🔨 Failed to update thumbnail. file unique id: %s".formatted(uniqueId)));
     }
 }

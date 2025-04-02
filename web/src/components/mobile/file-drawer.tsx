@@ -66,6 +66,10 @@ export default function FileDrawer({
             handleNavigation(1);
           }
         }
+
+        if (viewing && Math.abs(dy) > Math.abs(dx) && dy > 0) {
+          setViewing(false);
+        }
         document.removeEventListener("touchend", handleTouchEnd);
       };
       document.addEventListener("touchend", handleTouchEnd);
@@ -103,6 +107,7 @@ export default function FileDrawer({
         }
         onOpenChange(open);
       }}
+      handleOnly={viewing}
     >
       <DrawerContent
         data-fileid={file.id}

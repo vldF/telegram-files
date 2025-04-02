@@ -47,7 +47,7 @@ export default function FileInfo({
         {file.caption && (
           <SpoiledWrapper hasSensitiveContent={file.hasSensitiveContent}>
             <DrawerDescription
-              className="mx-auto mt-2 max-h-48 max-w-md overflow-y-auto text-start"
+              className="mx-auto mt-2 max-h-36 max-w-md overflow-y-auto text-start"
               dangerouslySetInnerHTML={{
                 __html: file.caption.replaceAll("\n", "<br />"),
               }}

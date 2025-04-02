@@ -59,7 +59,7 @@ export function FileCard({
           <FileImage
             file={file}
             className={cn(!isGalleryLayout && "h-16 w-16 min-w-16")}
-            isGalleryLayout
+            isGalleryLayout={isGalleryLayout}
           />
           {isGalleryLayout ? (
             <div className="w-5/6">

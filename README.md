@@ -232,15 +232,16 @@ the list.
 
 ```shell
 docker run --rm \
-  --entrypoint /bin/sh \
+  --entrypoint tfm \
   -v $(pwd)/data:/app/data \
   -e APP_ROOT=${APP_ROOT:-/app/data} \
   -e TELEGRAM_API_ID=${TELEGRAM_API_ID} \
   -e TELEGRAM_API_HASH=${TELEGRAM_API_HASH} \
-  ghcr.io/jarvis2f/telegram-files:latest tfm ${Maintenance Command}
+  ghcr.io/jarvis2f/telegram-files:latest ${Maintenance Command}
 ```
 
 **Maintenance Command:**
 
 - `album-caption`: Fixed issue with missing caption for album messages before `0.1.15`.
+- `thumbnail`: Fixed issue with missing clear thumbnail.
 </details>
