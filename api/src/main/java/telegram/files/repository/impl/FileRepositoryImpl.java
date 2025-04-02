@@ -55,7 +55,13 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 .mapFrom(FileRecord.PARAM_MAPPER)
                 .execute(fileRecord)
                 .map(r -> fileRecord)
-                .compose(r -> this.updateCaptionByMediaAlbumId(fileRecord.mediaAlbumId(), fileRecord.caption()).map(r))
+                .compose(r -> {
+                    if (Objects.equals(r.type(), "thumbnail")) {
+                        return Future.succeededFuture(r);
+                    } else {
+                        return this.updateCaptionByMediaAlbumId(fileRecord.mediaAlbumId(), fileRecord.caption()).map(r);
+                    }
+                })
                 .onSuccess(r -> log.trace("Successfully created file record: %s".formatted(fileRecord.id())))
                 .onFailure(err -> log.error("Failed to create file record: %s".formatted(err.getMessage())));
     }
@@ -572,7 +578,13 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         return Future.<String>future(promise -> {
             if (StrUtil.isBlank(caption)) {
                 this.getCaptionByMediaAlbumId(mediaAlbumId)
-                        .onSuccess(promise::complete);
+                        .onComplete(result -> {
+                            if (result.succeeded()) {
+                                promise.complete(result.result());
+                            } else {
+                                promise.complete(null);
+                            }
+                        });
             } else {
                 promise.complete(caption);
             }
