@@ -1,6 +1,5 @@
 import { Bell, Copy } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -8,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import React, { type FormEvent } from "react";
 import { useSettings } from "@/hooks/use-settings";
@@ -16,6 +14,9 @@ import { useTelegramAccount } from "@/hooks/use-telegram-account";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { DialogClose, DialogFooter } from "@/components/ui/dialog";
 import TimeRangeSelector from "@/components/ui/time-range-selector";
+import { Switch } from "@/components/ui/switch";
+import { type SettingKey } from "@/lib/types";
+import { Slider } from "@/components/ui/slider";
 
 export default function SettingsForm() {
   const { settings, setSetting, updateSettings } = useSettings();
@@ -33,6 +34,15 @@ export default function SettingsForm() {
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     await updateSettings();
+  };
+
+  const handleSwitchChange = (
+    key: SettingKey,
+    event?: React.MouseEvent<HTMLDivElement>,
+  ) => {
+    if (event && event.target instanceof HTMLInputElement) return;
+    event?.stopPropagation();
+    void setSetting(key, String(!(settings?.[key] === "true")));
   };
 
   return (
@@ -63,15 +73,16 @@ export default function SettingsForm() {
             </Button>
           </div>
         </div>
-        <div className="flex w-full flex-col space-y-4 rounded-md border p-4 shadow">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="unique-only">Unique Only</Label>
-            <Checkbox
+        <div
+          className="flex w-full cursor-pointer flex-col space-y-4 rounded-md border p-4 shadow"
+          onClick={(event) => handleSwitchChange("uniqueOnly", event)}
+        >
+          <div className="flex items-center justify-between">
+            <Label>Unique Only</Label>
+            <Switch
               id="unique-only"
               checked={settings?.uniqueOnly === "true"}
-              onCheckedChange={(checked) =>
-                void setSetting("uniqueOnly", String(checked))
-              }
+              onCheckedChange={() => handleSwitchChange("uniqueOnly")}
             />
           </div>
           <p className="text-xs text-muted-foreground">
@@ -82,30 +93,36 @@ export default function SettingsForm() {
           </p>
         </div>
         <div className="flex w-full flex-col space-y-4 rounded-md border p-4 shadow">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="always-hide">Always Hide</Label>
-            <Checkbox
-              id="always-hide"
-              checked={settings?.alwaysHide === "true"}
-              onCheckedChange={(checked) =>
-                void setSetting("alwaysHide", String(checked))
-              }
-            />
+          <div
+            className="flex cursor-pointer flex-col space-y-4"
+            onClick={(event) => handleSwitchChange("alwaysHide", event)}
+          >
+            <div className="flex items-center justify-between">
+              <Label>Always Hide</Label>
+              <Switch
+                id="always-hide"
+                checked={settings?.alwaysHide === "true"}
+                onCheckedChange={() => handleSwitchChange("alwaysHide")}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Always hide content and extra info in the table.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Always hide content and extra info in the table.
-          </p>
           {settings?.alwaysHide === "false" && (
-            <>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="show-sensitive-content">
-                  Show Sensitive Content
-                </Label>
-                <Checkbox
+            <div
+              className="flex cursor-pointer flex-col space-y-4"
+              onClick={(event) =>
+                handleSwitchChange("showSensitiveContent", event)
+              }
+            >
+              <div className="flex items-center justify-between">
+                <Label>Show Sensitive Content</Label>
+                <Switch
                   id="show-sensitive-content"
                   checked={settings?.showSensitiveContent === "true"}
-                  onCheckedChange={(checked) =>
-                    void setSetting("showSensitiveContent", String(checked))
+                  onCheckedChange={() =>
+                    handleSwitchChange("showSensitiveContent")
                   }
                 />
               </div>
@@ -113,30 +130,35 @@ export default function SettingsForm() {
                 Show sensitive content in the table, Will use a spoiler to hide
                 sensitive content if disabled.
               </p>
-            </>
+            </div>
           )}
         </div>
         <div className="flex w-full flex-col space-y-4 rounded-md border p-4 shadow">
           <Label>Auto Download Settings</Label>
-          <div className="flex flex-col space-y-2">
-            <Label htmlFor="limit">Limit Per Account</Label>
-            <Input
-              id="limit"
-              className="w-24"
-              type="number"
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="limit">Limit Per Account</Label>
+              <span className="text-muted-foreground">
+                {settings?.autoDownloadLimit ?? 5} / 10
+              </span>
+            </div>
+            <Slider
+              value={[Number(settings?.autoDownloadLimit ?? 5)]}
+              onValueChange={(v) => {
+                void setSetting("autoDownloadLimit", String(v[0]));
+              }}
               min={1}
               max={10}
-              value={settings?.autoDownloadLimit ?? 5}
-              onChange={(e) => {
-                void setSetting("autoDownloadLimit", e.target.value);
-              }}
+              step={1}
+              className="w-full"
             />
             <p className="text-xs text-muted-foreground">
               The maximum number of files to download per account. <br />
               This is useful for limiting the number of concurrent downloads.
+              Including the number of downloads you manually.
             </p>
           </div>
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-4">
             <Label htmlFor="avg-speed-interval">Avg Speed Interval</Label>
             <Select
               value={String(settings?.avgSpeedInterval)}
@@ -158,7 +180,7 @@ export default function SettingsForm() {
               Longer intervals may consume more memory.
             </p>
           </div>
-          <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-4">
             <Label htmlFor="time-limited">Time Limited</Label>
             <TimeRangeSelector
               startRequired={true}

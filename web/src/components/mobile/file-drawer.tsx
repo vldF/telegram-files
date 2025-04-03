@@ -76,7 +76,7 @@ export default function FileDrawer({
     };
     document.addEventListener("touchstart", handleTouchStart);
     return () => document.removeEventListener("touchstart", handleTouchStart);
-  }, [handleNavigation, file]);
+  }, [handleNavigation, file, viewing]);
 
   const slideVariants = {
     enter: (direction: number) => ({
