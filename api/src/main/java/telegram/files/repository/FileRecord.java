@@ -82,7 +82,7 @@ public record FileRecord(int id, //file id will change
             MapUtil.entry(new Version("0.1.15"), new String[]{
                     "ALTER TABLE file_record ADD COLUMN media_album_id BIGINT;",
             }),
-            MapUtil.entry(new Version("0.1.18"), new String[]{
+            MapUtil.entry(new Version("0.2.0"), new String[]{
                     "ALTER TABLE file_record ADD COLUMN extra VARCHAR(4096);",
                     "ALTER TABLE file_record ADD COLUMN thumbnail_unique_id VARCHAR(255);",
             })
