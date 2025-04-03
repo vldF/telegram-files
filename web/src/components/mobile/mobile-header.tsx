@@ -23,7 +23,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import React, { type CSSProperties } from "react";
+import React, { type CSSProperties, useEffect, useState } from "react";
 import AccountSelect from "@/components/account-select";
 import ChatSelect from "@/components/chat-select";
 import { cn } from "@/lib/utils";
@@ -38,16 +38,36 @@ import { useTelegramChat } from "@/hooks/use-telegram-chat";
 
 export function MobileHeader() {
   const { accountDownloadSpeed } = useWebsocket();
+  const [hidden, setHidden] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setHidden(currentScrollY > lastScrollY); // 向下滚动时隐藏
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   return (
-    <Card className="mb-6">
+    <Card
+      className={cn(
+        lastScrollY > 0
+          ? "fixed left-0 top-0 z-50 w-full rounded-none border-none bg-white/30 shadow-md backdrop-blur-md transition-transform duration-300 dark:bg-zinc-900/30 dark:shadow-sm dark:shadow-black/30"
+          : "mb-4",
+        hidden ? "-translate-y-full" : "translate-y-0",
+      )}
+    >
       <CardContent className="p-4">
         <div className="flex w-full items-center justify-between">
           <Link href={"/"} className="inline-flex">
             <TelegramIcon className="h-6 w-6" />
           </Link>
 
-          <div className="flex max-w-20 items-center gap-2 overflow-hidden text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 overflow-hidden text-sm text-muted-foreground">
             <span className="flex-1 text-nowrap">
               {`${prettyBytes(accountDownloadSpeed, { bits: true })}/s`}
             </span>
