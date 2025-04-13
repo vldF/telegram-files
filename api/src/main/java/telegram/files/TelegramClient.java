@@ -46,12 +46,21 @@ public class TelegramClient {
 
     @SuppressWarnings("unchecked")
     public <R extends TdApi.Object> Future<R> execute(TdApi.Function<R> method) {
+        return execute(method, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <R extends TdApi.Object> Future<R> execute(TdApi.Function<R> method, boolean ignoreException) {
         log.trace("Execute method: %s".formatted(TypeUtil.getTypeArgument(method.getClass())));
         if (!initialized) {
             throw new IllegalStateException("Client is not initialized");
         }
         return Future.future(promise -> client.send(method, object -> {
             if (object.getConstructor() == TdApi.Error.CONSTRUCTOR) {
+                if (ignoreException) {
+                    promise.complete(null);
+                    return;
+                }
                 promise.fail(new TelegramRunException((TdApi.Error) object));
             } else {
                 promise.complete((R) object);

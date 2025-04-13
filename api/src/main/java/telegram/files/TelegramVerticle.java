@@ -184,6 +184,7 @@ public class TelegramVerticle extends AbstractVerticle {
             searchChatMessages.offset = Convert.toInt(filter.get("offset"), 0);
             searchChatMessages.limit = Convert.toInt(filter.get("limit"), 20);
             searchChatMessages.filter = TdApiHelp.getSearchMessagesFilter(filter.get("type"));
+            searchChatMessages.messageThreadId = Convert.toLong(filter.get("messageThreadId"), 0L);
 
             return (Objects.equals(filter.get("downloadStatus"), FileRecord.DownloadStatus.idle.name()) ?
                     this.getIdleChatFiles(searchChatMessages, 0) :
@@ -262,14 +263,16 @@ public class TelegramVerticle extends AbstractVerticle {
     public Future<TdApi.File> startDownload(Long chatId, Long messageId, Integer fileId) {
         return Future.all(
                         client.execute(new TdApi.GetFile(fileId)),
-                        client.execute(new TdApi.GetMessage(chatId, messageId))
+                        client.execute(new TdApi.GetMessage(chatId, messageId)),
+                        client.execute(new TdApi.GetMessageThread(chatId, messageId), true)
                 )
                 .compose(results -> {
                     TdApi.File file = results.resultAt(0);
                     TdApi.Message message = results.resultAt(1);
+                    TdApi.MessageThreadInfo messageThreadInfo = results.resultAt(2);
                     if (file.local != null) {
                         if (file.local.isDownloadingCompleted) {
-                            return syncFileDownloadStatus(file, message)
+                            return syncFileDownloadStatus(file, message, messageThreadInfo)
                                     .map(file);
                         }
                         if (file.local.isDownloadingActive) {
@@ -280,7 +283,7 @@ public class TelegramVerticle extends AbstractVerticle {
 
                     TdApiHelp.FileHandler<? extends TdApi.MessageContent> fileHandler = TdApiHelp.getFileHandler(message)
                             .orElseThrow(() -> new NoStackTraceException("not support message type"));
-                    FileRecord fileRecord = fileHandler.convertFileRecord(telegramRecord.id());
+                    FileRecord fileRecord = fileHandler.convertFileRecord(telegramRecord.id()).withThreadInfo(messageThreadInfo);
                     return DataVerticle.fileRepository.createIfNotExist(fileRecord)
                             .compose(created -> {
                                 if (!created) {
@@ -362,7 +365,7 @@ public class TelegramVerticle extends AbstractVerticle {
                         return Future.failedFuture("File not started downloading");
                     }
                     if (file.local.isDownloadingCompleted) {
-                        return syncFileDownloadStatus(file, null).mapEmpty();
+                        return syncFileDownloadStatus(file, null, null).mapEmpty();
                     }
                     if (isPaused && !file.local.isDownloadingActive) {
                         return Future.failedFuture("File is not downloading");
@@ -812,7 +815,7 @@ public class TelegramVerticle extends AbstractVerticle {
         );
     }
 
-    private Future<Void> syncFileDownloadStatus(TdApi.File file, TdApi.Message message) {
+    private Future<Void> syncFileDownloadStatus(TdApi.File file, TdApi.Message message, TdApi.MessageThreadInfo messageThreadInfo) {
         return DataVerticle.fileRepository
                 .getByUniqueId(file.remote.uniqueId)
                 .compose(fileRecord -> {
@@ -832,7 +835,8 @@ public class TelegramVerticle extends AbstractVerticle {
 
                     fileRecord = TdApiHelp.getFileHandler(message)
                             .orElseThrow(() -> new NoStackTraceException("not support message type"))
-                            .convertFileRecord(telegramRecord.id());
+                            .convertFileRecord(telegramRecord.id())
+                            .withThreadInfo(messageThreadInfo);
 
                     return DataVerticle.fileRepository.create(fileRecord)
                             .compose(r -> DataVerticle.fileRepository.updateDownloadStatus(

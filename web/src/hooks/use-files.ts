@@ -26,7 +26,11 @@ type FileResponse = {
   nextFromMessageId: number;
 };
 
-export function useFiles(accountId: string, chatId: string) {
+export function useFiles(
+  accountId: string,
+  chatId: string,
+  messageThreadId?: number,
+) {
   const noAccountSpecified = accountId === "-1" && chatId === "-1";
   const url = noAccountSpecified
     ? "/files"
@@ -62,6 +66,7 @@ export function useFiles(accountId: string, chatId: string) {
       ...(filters.tags.length > 0 && {
         tags: filters.tags.join(","),
       }),
+      ...(messageThreadId && { messageThreadId: messageThreadId.toString() }),
       ...(filters.dateType && { dateType: filters.dateType }),
       ...(filters.dateRange && { dateRange: filters.dateRange.join(",") }),
       ...(filters.sizeRange && { sizeRange: filters.sizeRange.join(",") }),

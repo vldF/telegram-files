@@ -65,7 +65,10 @@ export default function FileRow({
       <div className="flex flex-col items-center">
         <span className="text-sm capitalize">{file.type}</span>
         {process.env.NODE_ENV === "development" && (
-          <span className="text-xs">{file.id}</span>
+          <div className="flex flex-col items-center text-xs">
+            <span className="text-xs">{file.id}</span>
+            <span className="text-xs">{file.messageId}</span>
+          </div>
         )}
       </div>
     ),

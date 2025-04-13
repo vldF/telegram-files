@@ -281,7 +281,9 @@ public class TdApiHelp {
                     "idle",
                     System.currentTimeMillis(),
                     null,
-                    null
+                    null,
+                    0L,
+                    0L
             );
         }
     }
@@ -328,7 +330,9 @@ public class TdApiHelp {
                     "idle",
                     System.currentTimeMillis(),
                     null,
-                    null
+                    null,
+                    0L,
+                    0L
             );
         }
 
@@ -388,7 +392,9 @@ public class TdApiHelp {
                     "idle",
                     System.currentTimeMillis(),
                     null,
-                    null
+                    null,
+                    0L,
+                    0L
             );
         }
 
@@ -454,7 +460,9 @@ public class TdApiHelp {
                     "idle",
                     System.currentTimeMillis(),
                     null,
-                    null
+                    null,
+                    0L,
+                    0L
             );
         }
 
@@ -515,7 +523,9 @@ public class TdApiHelp {
                     "idle",
                     System.currentTimeMillis(),
                     null,
-                    null
+                    null,
+                    0L,
+                    0L
             );
         }
 

@@ -5,6 +5,7 @@ import {
   ArrowDown,
   FileX,
   Loader2,
+  MessageSquareText,
   Pause,
   SquareX,
   StepForward,
@@ -21,6 +22,10 @@ import { type ReactNode } from "react";
 import prettyBytes from "pretty-bytes";
 import { AnimatePresence, motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { useTelegramMethod } from "@/hooks/use-telegram-method";
+import { toast } from "@/hooks/use-toast";
+import { useTelegramChat } from "@/hooks/use-telegram-chat";
 
 interface ActionButtonProps {
   tooltipText: string;
@@ -64,6 +69,9 @@ export default function FileControl({
   hovered?: boolean;
   isMobile?: boolean;
 }) {
+  const router = useRouter();
+  const { executeMethod, isMethodExecuting } = useTelegramMethod();
+  const { chat } = useTelegramChat();
   const showDownloadInfo =
     !hovered &&
     !file.originalDeleted &&
@@ -86,6 +94,50 @@ export default function FileControl({
     tooltipText: "Remove",
     icon: <FileX className={iconSize} />,
     loading: removing,
+  };
+
+  const replyBtnProps: ActionButtonProps = {
+    onClick: () => {
+      if (file.threadChatId !== 0 && file.messageThreadId !== 0) {
+        router.push(
+          `/accounts?id=${file.telegramId}&chatId=${file.threadChatId}&messageThreadId=${file.messageThreadId}`,
+        );
+        return;
+      } else {
+        void executeMethod({
+          data: {
+            chatId: file.chatId,
+            messageId: file.messageId,
+          },
+          method: "GetMessageThread",
+        })
+          .then((result) => {
+            if (!result) {
+              toast({
+                variant: "error",
+                description: "Failed to get message thread",
+              });
+              return;
+            }
+            const { chatId, messageThreadId } = result as {
+              chatId: number;
+              messageThreadId: number;
+            };
+            router.push(
+              `/accounts?id=${file.telegramId}&chatId=${chatId}&messageThreadId=${messageThreadId}`,
+            );
+          })
+          .catch(() => {
+            toast({
+              variant: "error",
+              description: "Failed to get message thread",
+            });
+          });
+      }
+    },
+    tooltipText: "View Comments",
+    icon: <MessageSquareText className={iconSize} />,
+    loading: isMethodExecuting,
   };
 
   const statusMapping: Record<DownloadStatus, ActionButtonProps[]> = {
@@ -156,6 +208,9 @@ export default function FileControl({
         className="flex w-full items-center justify-end space-x-4 md:justify-around md:space-x-2"
         onClick={(e) => e.preventDefault()}
       >
+        {chat?.type === "channel" && file.hasReply && (
+          <ActionButton isMobile={isMobile} {...replyBtnProps} />
+        )}
         {statusMapping[file.downloadStatus].map((btnProps, index) => (
           <ActionButton key={index} isMobile={isMobile} {...btnProps} />
         ))}

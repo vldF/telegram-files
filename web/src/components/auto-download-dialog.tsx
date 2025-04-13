@@ -54,6 +54,7 @@ const DEFAULT_RULE: AutoDownloadRule = {
   query: "",
   fileTypes: [],
   downloadHistory: true,
+  downloadCommentFiles: false,
 };
 
 export default function AutoDownloadDialog() {
@@ -234,6 +235,17 @@ export default function AutoDownloadDialog() {
                       </span>
                       <Badge>
                         {chat.auto.rule.downloadHistory
+                          ? "Enabled"
+                          : "Disabled"}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                      <span className="text-xs font-medium text-gray-500">
+                        Download Comment Files
+                      </span>
+                      <Badge>
+                        {chat.auto.rule.downloadCommentFiles
                           ? "Enabled"
                           : "Disabled"}
                       </Badge>
@@ -525,6 +537,23 @@ function AutoDownloadRule({ value, onChange }: AutoDownloadRuleProps) {
                 If enabled, all historical files will be downloaded. Otherwise,
                 only new files will be downloaded.
               </p>
+            </div>
+            <div className="rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="download-comment-files">
+                  Download comment files
+                </Label>
+                <Switch
+                  id="download-comment-files"
+                  checked={value.downloadCommentFiles}
+                  onCheckedChange={(checked) =>
+                    onChange({
+                      ...value,
+                      downloadCommentFiles: checked,
+                    })
+                  }
+                />
+              </div>
             </div>
           </div>
 

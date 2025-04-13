@@ -85,7 +85,9 @@ public class PreloadMessageVerticle extends AbstractVerticle {
             if (fileHandlerOptional.isEmpty()) {
                 continue;
             }
-            FileRecord fileRecord = fileHandlerOptional.get().convertFileRecord(auto.telegramId);
+            TdApi.MessageThreadInfo messageThreadInfo = Future.await(telegramVerticle.client
+                    .execute(new TdApi.GetMessageThread(message.chatId, message.id), true));
+            FileRecord fileRecord = fileHandlerOptional.get().convertFileRecord(auto.telegramId).withThreadInfo(messageThreadInfo);
             if (Future.await(DataVerticle.fileRepository.createIfNotExist(fileRecord))) {
                 count++;
             }
@@ -109,11 +111,18 @@ public class PreloadMessageVerticle extends AbstractVerticle {
                 .ifPresent(telegramVerticle -> {
                     if (!telegramVerticle.authorized) return;
 
-                    telegramVerticle.client.execute(new TdApi.GetMessage(chatId, messageId))
-                            .onSuccess(message -> TdApiHelp.getFileHandler(message).ifPresent(fileHandler -> {
-                                FileRecord fileRecord = fileHandler.convertFileRecord(telegramId);
-                                DataVerticle.fileRepository.createIfNotExist(fileRecord);
-                            }))
+                    Future.all(
+                                    telegramVerticle.client.execute(new TdApi.GetMessage(chatId, messageId)),
+                                    telegramVerticle.client.execute(new TdApi.GetMessageThread(chatId, messageId))
+                            )
+                            .onSuccess(result -> {
+                                TdApi.Message message = result.resultAt(0);
+                                TdApi.MessageThreadInfo messageThreadInfo = result.resultAt(1);
+                                TdApiHelp.getFileHandler(message).ifPresent(fileHandler -> {
+                                    FileRecord fileRecord = fileHandler.convertFileRecord(telegramId).withThreadInfo(messageThreadInfo);
+                                    DataVerticle.fileRepository.createIfNotExist(fileRecord);
+                                });
+                            })
                             .onFailure(e -> log.error("Preload message fail. Get message failed: %s".formatted(e.getMessage())));
                 });
     }

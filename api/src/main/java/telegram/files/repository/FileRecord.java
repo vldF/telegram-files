@@ -5,6 +5,7 @@ import cn.hutool.core.lang.Version;
 import cn.hutool.core.map.MapUtil;
 import io.vertx.sqlclient.templates.RowMapper;
 import io.vertx.sqlclient.templates.TupleMapper;
+import org.drinkless.tdlib.TdApi;
 import telegram.files.Config;
 
 import java.util.Objects;
@@ -32,7 +33,9 @@ public record FileRecord(int id, //file id will change
                          String transferStatus, // 'idle' | 'transferring' | 'completed' | 'error'
                          long startDate, // date when the file was started to download
                          Long completionDate, // date when the file was downloaded
-                         String tags
+                         String tags,
+                         long threadChatId, // Comment thread chat id, if the file has a comment thread
+                         long messageThreadId // The message belongs to the thread.
 ) {
 
     public enum DownloadStatus {
@@ -69,6 +72,8 @@ public record FileRecord(int id, //file id will change
                 start_date          BIGINT,
                 completion_date     BIGINT,
                 tags                VARCHAR(2056),
+                thread_chat_id      BIGINT,
+                message_thread_id   BIGINT,
                 PRIMARY KEY (id, unique_id)
             )
             """;
@@ -90,6 +95,8 @@ public record FileRecord(int id, //file id will change
             }),
             MapUtil.entry(new Version("0.2.1"), new String[]{
                     "ALTER TABLE file_record ADD COLUMN tags VARCHAR(2056);",
+                    "ALTER TABLE file_record ADD COLUMN thread_chat_id BIGINT;",
+                    "ALTER TABLE file_record ADD COLUMN message_thread_id BIGINT;",
             })
     ));
 
@@ -128,7 +135,9 @@ public record FileRecord(int id, //file id will change
                     row.getString("transfer_status"),
                     Objects.requireNonNullElse(row.getLong("start_date"), 0L),
                     row.getLong("completion_date"),
-                    row.getString("tags")
+                    row.getString("tags"),
+                    Objects.requireNonNullElse(row.getLong("thread_chat_id"), 0L),
+                    Objects.requireNonNullElse(row.getLong("message_thread_id"), 0L)
             );
 
     public static TupleMapper<FileRecord> PARAM_MAPPER = TupleMapper.mapper(r ->
@@ -155,11 +164,21 @@ public record FileRecord(int id, //file id will change
                     MapUtil.entry("transfer_status", r.transferStatus()),
                     MapUtil.entry("start_date", r.startDate()),
                     MapUtil.entry("completion_date", r.completionDate()),
-                    MapUtil.entry("tags", r.tags())
+                    MapUtil.entry("tags", r.tags()),
+                    MapUtil.entry("thread_chat_id", r.threadChatId()),
+                    MapUtil.entry("message_thread_id", r.messageThreadId())
             ));
 
     public FileRecord withSourceField(int id, long downloadedSize) {
-        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, thumbnailUniqueId, caption, extra, localPath, downloadStatus, transferStatus, startDate, completionDate, tags);
+        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, thumbnailUniqueId, caption, extra, localPath, downloadStatus, transferStatus, startDate, completionDate, tags, threadChatId, messageThreadId);
+    }
+
+    public FileRecord withThreadInfo(TdApi.MessageThreadInfo threadInfo) {
+        if (threadInfo == null) {
+            return this;
+        }
+        return new FileRecord(id, uniqueId, telegramId, chatId, messageId, mediaAlbumId, date, hasSensitiveContent, size, downloadedSize, type, mimeType, fileName, thumbnail, thumbnailUniqueId, caption, extra, localPath, downloadStatus, transferStatus, startDate, completionDate, tags,
+                threadInfo.chatId, threadInfo.messageThreadId);
     }
 
     public boolean isDownloadStatus(DownloadStatus status) {

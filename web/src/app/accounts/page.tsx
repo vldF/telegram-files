@@ -11,12 +11,19 @@ export default function AccountPage() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get("id");
   const chatId = searchParams.get("chatId");
+  const messageThreadId = searchParams.get("messageThreadId")
+    ? Number(searchParams.get("messageThreadId"))
+    : undefined;
 
   return (
     <div className="container mx-auto px-4 py-6">
       {isMobile ? <MobileHeader /> : <Header />}
       {accountId && chatId ? (
-        <Files accountId={accountId} chatId={chatId} />
+        <Files
+          accountId={accountId}
+          chatId={chatId}
+          messageThreadId={messageThreadId}
+        />
       ) : (
         <EmptyState hasAccounts={true} message="Select a chat to view files" />
       )}

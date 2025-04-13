@@ -46,11 +46,11 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                                                 size, downloaded_size,
                                                 type, mime_type,
                                                 file_name, thumbnail, thumbnail_unique_id, caption, extra, local_path,
-                                                download_status, start_date, transfer_status)
+                                                download_status, start_date, transfer_status, tags, thread_chat_id, message_thread_id)
                         values (#{id}, #{unique_id}, #{telegram_id}, #{chat_id}, #{message_id}, #{media_album_id}, #{date},
                                 #{has_sensitive_content}, #{size}, #{downloaded_size}, #{type},
                                 #{mime_type}, #{file_name}, #{thumbnail}, #{thumbnail_unique_id}, #{caption}, #{extra}, #{local_path},
-                                #{download_status}, #{start_date}, #{transfer_status})
+                                #{download_status}, #{start_date}, #{transfer_status}, #{tags}, #{thread_chat_id}, #{message_thread_id})
                         """)
                 .mapFrom(FileRecord.PARAM_MAPPER)
                 .execute(fileRecord)
@@ -84,6 +84,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         String downloadStatus = filter.get("downloadStatus");
         String transferStatus = filter.get("transferStatus");
         List<String> tags = StrUtil.split(filter.get("tags"), ",");
+        long messageThreadId = Convert.toLong(filter.get("messageThreadId"), 0L);
         String dateType = filter.get("dateType");
         String dateRange = filter.get("dateRange");
         String sizeRange = filter.get("sizeRange");
@@ -127,6 +128,10 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                     .map(tag -> "tags LIKE '%%" + tag + "%%'")
                     .collect(Collectors.joining(" OR "));
             whereClause += " AND (%s)".formatted(tagClause);
+        }
+        if (messageThreadId != 0) {
+            whereClause += " AND message_thread_id = #{messageThreadId}";
+            params.put("messageThreadId", messageThreadId);
         }
         if (StrUtil.isNotBlank(dateType) && StrUtil.isNotBlank(dateRange)) {
             String[] dates = dateRange.split(",");

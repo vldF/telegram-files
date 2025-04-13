@@ -2,7 +2,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Download, LoaderCircle, LoaderPinwheel } from "lucide-react";
+import {
+  Download,
+  LoaderCircle,
+  LoaderPinwheel,
+  SquareChevronLeft,
+} from "lucide-react";
 import { useFiles } from "@/hooks/use-files";
 import {
   getRowHeightPX,
@@ -66,9 +71,14 @@ const COLUMNS: Column[] = [
 interface FileTableProps {
   accountId: string;
   chatId: string;
+  messageThreadId?: number;
 }
 
-export function FileTable({ accountId, chatId }: FileTableProps) {
+export function FileTable({
+  accountId,
+  chatId,
+  messageThreadId,
+}: FileTableProps) {
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const tableParentRef = useRef(null);
   const [columns, setColumns] = useState<Column[]>(COLUMNS);
@@ -76,7 +86,7 @@ export function FileTable({ accountId, chatId }: FileTableProps) {
     "telegramFileList",
     "m",
   );
-  const useFilesProps = useFiles(accountId, chatId);
+  const useFilesProps = useFiles(accountId, chatId, messageThreadId);
   const {
     filters,
     updateField,
@@ -216,6 +226,17 @@ export function FileTable({ accountId, chatId }: FileTableProps) {
     <>
       <div className="mb-6 flex flex-col flex-wrap justify-between gap-2 md:flex-row">
         <div className="flex items-center gap-3">
+          {messageThreadId && (
+            <Button
+              variant="link"
+              onClick={() => {
+                window.history.back();
+              }}
+            >
+              <SquareChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+          )}
           <Badge variant="outline" className="flex h-full bg-accent">
             {filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}
           </Badge>

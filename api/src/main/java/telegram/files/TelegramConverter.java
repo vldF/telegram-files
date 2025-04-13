@@ -157,6 +157,10 @@ public class TelegramConverter {
         fileObject.put("extra", extra);
         fileObject.put("originalDeleted", message == null);
 
+        if (message != null) {
+            fileObject.put("hasReply", Convert.toInt(BeanUtil.getProperty(message, "interactionInfo.replyInfo.replyCount"), 0) > 0);
+        }
+
         // Put thumbnail information
         if (thumbnailRecord != null) {
             fileObject.put("thumbnailFile", JsonObject.of(

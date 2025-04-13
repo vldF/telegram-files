@@ -80,15 +80,22 @@ public class SettingAutoRecords {
 
         public Boolean downloadHistory;
 
+        public Boolean downloadCommentFiles;
+
         public TransferRule transferRule;
 
         public Rule() {
         }
 
-        public Rule(String query, List<String> fileTypes, boolean downloadHistory, TransferRule transferRule) {
+        public Rule(String query,
+                    List<String> fileTypes,
+                    boolean downloadHistory,
+                    boolean downloadCommentFiles,
+                    TransferRule transferRule) {
             this.query = query;
             this.fileTypes = fileTypes;
             this.downloadHistory = downloadHistory;
+            this.downloadCommentFiles = downloadCommentFiles;
             this.transferRule = transferRule;
         }
     }

@@ -63,6 +63,9 @@ export type TelegramFile = {
   extra?: PhotoExtra | VideoExtra;
   tags?: string;
   loaded: boolean;
+  threadChatId: number;
+  messageThreadId: number;
+  hasReply?: boolean;
 
   prev?: TelegramFile;
   next?: TelegramFile;
@@ -180,5 +183,6 @@ export type AutoDownloadRule = {
   query: string;
   fileTypes: Array<Exclude<FileType, "media">>;
   downloadHistory: boolean;
+  downloadCommentFiles: boolean;
   transferRule?: TransferRule;
 };
