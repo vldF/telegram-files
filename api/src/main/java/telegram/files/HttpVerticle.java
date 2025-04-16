@@ -58,7 +58,7 @@ public class HttpVerticle extends AbstractVerticle {
     public void start(Promise<Void> startPromise) {
         initHttpServer()
                 .compose(r -> initTelegramVerticles())
-                .compose(r -> AutoRecordsHolder.INSTANCE.init())
+                .compose(r -> AutomationsHolder.INSTANCE.init())
                 .compose(r -> initAutoDownloadVerticle())
                 .compose(r -> initTransferVerticle())
                 .compose(r -> initPreloadMessageVerticle())
@@ -69,7 +69,7 @@ public class HttpVerticle extends AbstractVerticle {
 
     @Override
     public void stop(Promise<Void> stopPromise) {
-        AutoRecordsHolder.INSTANCE.saveAutoRecords()
+        AutomationsHolder.INSTANCE.saveAutoRecords()
                 .onComplete(ignore -> {
                     log.info("Http verticle stopped!");
                     stopPromise.complete();
@@ -241,7 +241,7 @@ public class HttpVerticle extends AbstractVerticle {
 
         vertx.eventBus().consumer(EventEnum.AUTO_DOWNLOAD_UPDATE.address(), message -> {
             log.debug("Auto settings update: %s".formatted(message.body()));
-            AutoRecordsHolder.INSTANCE.onAutoRecordsUpdate(Json.decodeValue(message.body().toString(), SettingAutoRecords.class));
+            AutomationsHolder.INSTANCE.onAutoRecordsUpdate(Json.decodeValue(message.body().toString(), SettingAutoRecords.class));
         });
         return Future.succeededFuture();
     }
@@ -265,7 +265,7 @@ public class HttpVerticle extends AbstractVerticle {
                     long timerId = vertx.setPeriodic(30000, id -> {
                         if (!ws.isClosed()) {
                             ws.writePing(Buffer.buffer("👀"));
-                            log.debug("Ping Client: %s".formatted(sessionId));
+                            log.trace("Ping Client: %s".formatted(sessionId));
                         }
                     });
 

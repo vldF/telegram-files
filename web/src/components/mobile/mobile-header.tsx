@@ -27,7 +27,7 @@ import React, { type CSSProperties, useEffect, useState } from "react";
 import AccountSelect from "@/components/account-select";
 import ChatSelect from "@/components/chat-select";
 import { cn } from "@/lib/utils";
-import AutoDownloadDialog from "@/components/auto-download-dialog";
+import AutomationDialog from "@/components/automation-dialog";
 import { Badge } from "@/components/ui/badge";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import { SettingsDialog } from "@/components/settings-dialog";
@@ -126,7 +126,7 @@ function MenuDrawer() {
                   </Label>
                   <div className="py-2">
                     {chat ? (
-                      <AutoDownloadDialog />
+                      <AutomationDialog />
                     ) : (
                       <Button
                         variant="outline"

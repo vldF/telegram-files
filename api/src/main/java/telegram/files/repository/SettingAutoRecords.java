@@ -11,44 +11,28 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SettingAutoRecords {
-
-    public List<Item> items;
+    public List<Automation> automations;
 
     public static final int HISTORY_PRELOAD_STATE = 1;
 
     public static final int HISTORY_DOWNLOAD_STATE = 2;
 
-    public static final int HISTORY_TRANSFER_STATE = 3;
+    public static final int HISTORY_DOWNLOAD_SCAN_STATE = 3;
 
-    public static class Item {
+    public static final int HISTORY_TRANSFER_STATE = 4;
+
+    public static class Automation {
         public long telegramId;
 
         public long chatId;
 
-        public String nextFileType;
+        public PreloadConfig preload;
 
-        public long nextFromMessageId;
+        public DownloadConfig download;
 
-        public Rule rule;
-
-        public boolean downloadEnabled;
-
-        public boolean preloadEnabled;
-
-        public long nextFromMessageIdForPreload;
+        public TransferConfig transfer;
 
         public int state;
-
-        public Item() {
-            // downloadEnabled default is true
-            this.downloadEnabled = true;
-        }
-
-        public Item(long telegramId, long chatId, Rule rule) {
-            this.telegramId = telegramId;
-            this.chatId = chatId;
-            this.rule = rule;
-        }
 
         public String uniqueKey() {
             return telegramId + ":" + chatId;
@@ -62,41 +46,63 @@ public class SettingAutoRecords {
         }
 
         @JsonIgnore
-        public boolean isNotComplete(int bitwise) {
+        public boolean isComplete(int bitwise) {
             MessyUtils.BitState bitState = new MessyUtils.BitState(state);
-            return !bitState.isStateEnabled(bitwise);
+            return bitState.isStateEnabled(bitwise);
         }
 
         @JsonIgnore
-        public boolean isDownloadHistoryEnabled() {
-            return rule == null || rule.downloadHistory == null || rule.downloadHistory;
+        public boolean isNotComplete(int bitwise) {
+            return !isComplete(bitwise);
         }
     }
 
-    public static class Rule {
+    public static class PreloadConfig {
+        public boolean enabled;
+
+        public long nextFromMessageId;
+
+        public PreloadConfig with(PreloadConfig config) {
+            this.enabled = config.enabled;
+            return this;
+        }
+    }
+
+    public static class DownloadConfig {
+        public boolean enabled;
+
+        public DownloadRule rule;
+
+        public String nextFileType;
+
+        public long nextFromMessageId;
+
+        public DownloadConfig with(DownloadConfig config) {
+            this.enabled = config.enabled;
+            this.rule = config.rule;
+            return this;
+        }
+    }
+
+    public static class DownloadRule {
         public String query;
 
         public List<String> fileTypes;
 
-        public Boolean downloadHistory;
+        public boolean downloadHistory;
 
-        public Boolean downloadCommentFiles;
+        public boolean downloadCommentFiles;
+    }
 
-        public TransferRule transferRule;
+    public static class TransferConfig {
+        public boolean enabled;
 
-        public Rule() {
-        }
+        public TransferRule rule;
 
-        public Rule(String query,
-                    List<String> fileTypes,
-                    boolean downloadHistory,
-                    boolean downloadCommentFiles,
-                    TransferRule transferRule) {
-            this.query = query;
-            this.fileTypes = fileTypes;
-            this.downloadHistory = downloadHistory;
-            this.downloadCommentFiles = downloadCommentFiles;
-            this.transferRule = transferRule;
+        public TransferConfig with(TransferConfig config) {
+            this.enabled = config.enabled;
+            this.rule = config.rule;
+            return this;
         }
     }
 
@@ -108,68 +114,58 @@ public class SettingAutoRecords {
         public Transfer.TransferPolicy transferPolicy;
 
         public Transfer.DuplicationPolicy duplicationPolicy;
-
-        public TransferRule() {
-        }
-
-        public TransferRule(boolean transferHistory,
-                            String destination,
-                            Transfer.TransferPolicy transferPolicy,
-                            Transfer.DuplicationPolicy duplicationPolicy) {
-            this.transferHistory = transferHistory;
-            this.destination = destination;
-            this.transferPolicy = transferPolicy;
-            this.duplicationPolicy = duplicationPolicy;
-        }
     }
 
     public SettingAutoRecords() {
-        this.items = new ArrayList<>();
+        this.automations = new ArrayList<>();
     }
 
-    public SettingAutoRecords(List<Item> items) {
-        this.items = items;
+    public SettingAutoRecords(List<Automation> automations) {
+        this.automations = automations;
     }
 
     public boolean exists(long telegramId, long chatId) {
-        return items.stream().anyMatch(item -> item.telegramId == telegramId && item.chatId == chatId);
+        return automations.stream().anyMatch(item -> item.telegramId == telegramId && item.chatId == chatId);
     }
 
-    public void add(Item item) {
-        items.removeIf(i -> i.telegramId == item.telegramId && i.chatId == item.chatId);
-        items.add(item);
-    }
-
-    public void add(long telegramId, long chatId, Rule rule) {
-        items.add(new Item(telegramId, chatId, rule));
+    public void add(Automation item) {
+        automations.removeIf(i -> i.telegramId == item.telegramId && i.chatId == item.chatId);
+        automations.add(item);
     }
 
     public void remove(long telegramId, long chatId) {
-        items.removeIf(item -> item.telegramId == telegramId && item.chatId == chatId);
+        automations.removeIf(item -> item.telegramId == telegramId && item.chatId == chatId);
     }
 
     @JsonIgnore
-    public List<Item> getDownloadEnabledItems() {
-        return items.stream()
-                .filter(i -> i.downloadEnabled)
+    public List<Automation> getPreloadEnabledItems() {
+        return automations.stream()
+                .filter(i -> i.preload != null && i.preload.enabled)
                 .toList();
     }
 
     @JsonIgnore
-    public List<Item> getPreloadEnabledItems() {
-        return items.stream()
-                .filter(i -> i.preloadEnabled)
+    public List<Automation> getDownloadEnabledItems() {
+        return automations.stream()
+                .filter(i -> i.download != null && i.download.enabled)
                 .toList();
     }
 
-    public Map<Long, Item> getItems(long telegramId) {
-        return items.stream()
+    @JsonIgnore
+    public List<Automation> getTransferEnabledItems() {
+        return automations.stream()
+                .filter(i -> i.transfer != null && i.transfer.enabled)
+                .toList();
+    }
+
+    public Map<Long, Automation> getItems(long telegramId) {
+        return automations.stream()
                 .filter(item -> item.telegramId == telegramId)
                 .collect(Collectors.toMap(i -> i.chatId, Function.identity()));
     }
 
-    public Item getItem(long telegramId, long chatId) {
-        return items.stream()
+    public Automation getItem(long telegramId, long chatId) {
+        return automations.stream()
                 .filter(item -> item.telegramId == telegramId && item.chatId == chatId)
                 .findFirst()
                 .orElse(null);

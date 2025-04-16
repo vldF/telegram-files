@@ -1,6 +1,5 @@
 package telegram.files;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.Log;
@@ -13,7 +12,6 @@ import org.jooq.lambda.tuple.Tuple3;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.SettingAutoRecords;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +37,8 @@ public class TransferVerticle extends AbstractVerticle {
     private volatile Transfer beingTransferred;
 
     public TransferVerticle() {
-        this.autoRecords = AutoRecordsHolder.INSTANCE.autoRecords();
-        AutoRecordsHolder.INSTANCE.registerOnRemoveListener(removedItems -> removedItems.forEach(item -> {
+        this.autoRecords = AutomationsHolder.INSTANCE.autoRecords();
+        AutomationsHolder.INSTANCE.registerOnRemoveListener(removedItems -> removedItems.forEach(item -> {
             waitingTransferFiles.removeIf(waitingTransferFile -> waitingTransferFile.uniqueId().equals(item.uniqueKey()));
             transfers.remove(item.uniqueKey());
         }));
@@ -52,7 +50,13 @@ public class TransferVerticle extends AbstractVerticle {
             vertx.setPeriodic(0, HISTORY_SCAN_INTERVAL, id -> addHistoryFiles());
             vertx.setPeriodic(0, TRANSFER_INTERVAL, id -> startTransfer());
 
-            log.info("Transfer verticle started");
+            log.info("""
+                    Transfer verticle started!
+                    |History scan interval: %s ms
+                    |Transfer interval: %s ms
+                    |Auto chats: %s
+                    """.formatted(HISTORY_SCAN_INTERVAL, TRANSFER_INTERVAL, autoRecords.getTransferEnabledItems().size()));
+
             startPromise.complete();
         }).onFailure(startPromise::fail);
     }
@@ -89,11 +93,26 @@ public class TransferVerticle extends AbstractVerticle {
                     return;
                 }
                 FileRecord fileRecord = Future.await(DataVerticle.fileRepository.getByUniqueId((String) data.get("uniqueId")));
-                if (getTransfer(autoRecords.getItem(fileRecord.telegramId(), fileRecord.chatId())) == null) {
+
+                SettingAutoRecords.Automation automation = null;
+                if (fileRecord.threadChatId() != 0 && fileRecord.messageThreadId() != 0 && fileRecord.threadChatId() == fileRecord.chatId()) {
+                    // thread message file,try to get the main message
+                    FileRecord mainFileRecord = Future.await(DataVerticle.fileRepository.getMainFileByThread(
+                            fileRecord.telegramId(),
+                            fileRecord.threadChatId(),
+                            fileRecord.messageThreadId()));
+                    if (mainFileRecord != null) {
+                        automation = autoRecords.getItem(mainFileRecord.telegramId(), mainFileRecord.chatId());
+                    }
+                } else {
+                    automation = autoRecords.getItem(fileRecord.telegramId(), fileRecord.chatId());
+                }
+
+                if (automation == null || !automation.transfer.enabled || getTransfer(automation) == null) {
                     return;
                 }
 
-                if (addWaitingTransferFile(fileRecord)) {
+                if (addWaitingTransferFile(automation.telegramId, automation.chatId, fileRecord.uniqueId())) {
                     log.debug("Add file to transfer queue: %s".formatted(fileRecord.uniqueId()));
                 }
             }
@@ -103,24 +122,29 @@ public class TransferVerticle extends AbstractVerticle {
     }
 
     private void addHistoryFiles() {
-        if (CollUtil.isEmpty(autoRecords.items)) {
+        if (CollUtil.isEmpty(autoRecords.automations)) {
             return;
         }
-        log.debug("Start scan history files for transfer");
-        for (SettingAutoRecords.Item item : autoRecords.items) {
-            Transfer transfer = getTransfer(item);
-            if (transfer == null || !transfer.transferHistory || item.isNotComplete(SettingAutoRecords.HISTORY_PRELOAD_STATE)) {
+        log.trace("Start scan history files for transfer");
+        for (SettingAutoRecords.Automation automation : autoRecords.automations) {
+            if (!automation.transfer.enabled
+                || !automation.transfer.rule.transferHistory
+                || automation.isComplete(SettingAutoRecords.HISTORY_TRANSFER_STATE)) {
                 continue;
             }
-            Tuple3<List<FileRecord>, Long, Long> filesTuple = Future.await(DataVerticle.fileRepository.getFiles(item.chatId,
+            Transfer transfer = getTransfer(automation);
+            if (transfer == null) {
+                continue;
+            }
+            Tuple3<List<FileRecord>, Long, Long> filesTuple = Future.await(DataVerticle.fileRepository.getFiles(automation.chatId,
                     Map.of("status", FileRecord.DownloadStatus.completed.name(),
                             "transferStatus", FileRecord.TransferStatus.idle.name()
                     )
             ));
             List<FileRecord> files = filesTuple.v1;
             if (CollUtil.isEmpty(files)) {
-                log.debug("No history files found for transfer: %s".formatted(item.uniqueKey()));
-                item.complete(SettingAutoRecords.HISTORY_TRANSFER_STATE);
+                log.debug("No history files found for transfer: %s".formatted(automation.uniqueKey()));
+                automation.complete(SettingAutoRecords.HISTORY_TRANSFER_STATE);
                 continue;
             }
 
@@ -139,9 +163,11 @@ public class TransferVerticle extends AbstractVerticle {
     }
 
     private boolean addWaitingTransferFile(FileRecord fileRecord) {
-        WaitingTransferFile waitingTransferFile = new WaitingTransferFile(fileRecord.telegramId(),
-                fileRecord.chatId(),
-                fileRecord.uniqueId());
+        return addWaitingTransferFile(fileRecord.telegramId(), fileRecord.chatId(), fileRecord.uniqueId());
+    }
+
+    private boolean addWaitingTransferFile(long telegramId, long chatId, String uniqueId) {
+        WaitingTransferFile waitingTransferFile = new WaitingTransferFile(telegramId, chatId, uniqueId);
         if (!waitingTransferFiles.contains(waitingTransferFile)) {
             waitingTransferFiles.add(waitingTransferFile);
             return true;
@@ -149,24 +175,25 @@ public class TransferVerticle extends AbstractVerticle {
         return false;
     }
 
-    private Transfer getTransfer(SettingAutoRecords.Item item) {
-        if (item == null) {
-            return null;
-        }
-        if (transfers.containsKey(item.uniqueKey())) {
-            return transfers.get(item.uniqueKey());
-        }
-
-        SettingAutoRecords.TransferRule transferRule = BeanUtil.getProperty(item, "rule.transferRule");
-        if (transferRule == null) {
+    private Transfer getTransfer(SettingAutoRecords.Automation automation) {
+        if (automation == null || !automation.transfer.enabled) {
             return null;
         }
 
-        return transfers.computeIfAbsent(item.uniqueKey(), k -> {
-            Transfer transfer = Transfer.create(transferRule.transferPolicy);
-            transfer.destination = transferRule.destination;
-            transfer.duplicationPolicy = transferRule.duplicationPolicy;
-            transfer.transferHistory = transferRule.transferHistory;
+        SettingAutoRecords.TransferRule transferRule = automation.transfer.rule;
+
+        if (transfers.containsKey(automation.uniqueKey())) {
+            Transfer transfer = transfers.get(automation.uniqueKey());
+            if (!transfer.isRuleUpdated(transferRule)) {
+                return transfer;
+            } else {
+                log.debug("Transfer rule updated: %s".formatted(automation.uniqueKey()));
+                transfers.remove(automation.uniqueKey());
+            }
+        }
+
+        return transfers.computeIfAbsent(automation.uniqueKey(), k -> {
+            Transfer transfer = Transfer.create(transferRule);
             transfer.transferStatusUpdated = updated ->
                     updateTransferStatus(updated.fileRecord(), updated.transferStatus(), updated.localPath());
             return transfer;
@@ -215,12 +242,6 @@ public class TransferVerticle extends AbstractVerticle {
         if (fileRecord.transferStatus() != null
             && !fileRecord.isTransferStatus(FileRecord.TransferStatus.idle)) {
             log.debug("File {} transfer status is not idle: {}", fileRecord.id(), fileRecord.transferStatus());
-            return;
-        }
-
-        File originFile = new File(fileRecord.localPath());
-        if (!originFile.exists()) {
-            log.error("File {} not found: {}", fileRecord.id(), fileRecord.localPath());
             return;
         }
 

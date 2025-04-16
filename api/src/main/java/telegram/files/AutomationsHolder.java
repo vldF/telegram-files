@@ -12,25 +12,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class AutoRecordsHolder {
+public class AutomationsHolder {
     private final Log log = LogFactory.get();
 
-    private final SettingAutoRecords autoRecords = new SettingAutoRecords();
+    private final SettingAutoRecords AUTO_RECORDS = new SettingAutoRecords();
 
-    private final List<Consumer<List<SettingAutoRecords.Item>>> onRemoveListeners = new ArrayList<>();
+    private final List<Consumer<List<SettingAutoRecords.Automation>>> onRemoveListeners = new ArrayList<>();
 
     private volatile boolean initialized = false;
 
-    public static final AutoRecordsHolder INSTANCE = new AutoRecordsHolder();
+    public static final AutomationsHolder INSTANCE = new AutomationsHolder();
 
-    private AutoRecordsHolder() {
+    private AutomationsHolder() {
     }
 
     public SettingAutoRecords autoRecords() {
-        return autoRecords;
+        return AUTO_RECORDS;
     }
 
-    public void registerOnRemoveListener(Consumer<List<SettingAutoRecords.Item>> onRemove) {
+    public void registerOnRemoveListener(Consumer<List<SettingAutoRecords.Automation>> onRemove) {
         onRemoveListeners.add(onRemove);
     }
 
@@ -38,16 +38,16 @@ public class AutoRecordsHolder {
         if (initialized) {
             return Future.succeededFuture();
         }
-        return DataVerticle.settingRepository.<SettingAutoRecords>getByKey(SettingKey.autoDownload)
+        return DataVerticle.settingRepository.<SettingAutoRecords>getByKey(SettingKey.automation)
                 .onSuccess(settingAutoRecords -> {
                     initialized = true;
                     if (settingAutoRecords == null) {
                         return;
                     }
-                    settingAutoRecords.items.forEach(item -> TelegramVerticles.get(item.telegramId)
+                    settingAutoRecords.automations.forEach(item -> TelegramVerticles.get(item.telegramId)
                             .ifPresentOrElse(telegramVerticle -> {
                                 if (telegramVerticle.authorized) {
-                                    autoRecords.add(item);
+                                    AUTO_RECORDS.add(item);
                                 } else {
                                     log.warn("Init auto records fail. Telegram verticle not authorized: %s".formatted(item.telegramId));
                                 }
@@ -58,23 +58,30 @@ public class AutoRecordsHolder {
     }
 
     public void onAutoRecordsUpdate(SettingAutoRecords records) {
-        for (SettingAutoRecords.Item item : records.items) {
-            if (!autoRecords.exists(item.telegramId, item.chatId)) {
+        for (SettingAutoRecords.Automation automation : records.automations) {
+            if (!AUTO_RECORDS.exists(automation.telegramId, automation.chatId)) {
                 // new enabled
-                TelegramVerticles.get(item.telegramId)
+                TelegramVerticles.get(automation.telegramId)
                         .ifPresentOrElse(telegramVerticle -> {
                             if (telegramVerticle.authorized) {
-                                autoRecords.add(item);
-                                log.info("Add auto records success: %s".formatted(item.uniqueKey()));
+                                AUTO_RECORDS.add(automation);
+                                log.info("Add auto records success: %s".formatted(automation.uniqueKey()));
                             } else {
-                                log.warn("Add auto records fail. Telegram verticle not authorized: %s".formatted(item.telegramId));
+                                log.warn("Add auto records fail. Telegram verticle not authorized: %s".formatted(automation.telegramId));
                             }
-                        }, () -> log.warn("Add auto records fail. Telegram verticle not found: %s".formatted(item.telegramId)));
+                        }, () -> log.warn("Add auto records fail. Telegram verticle not found: %s".formatted(automation.telegramId)));
+            } else {
+                // update fields
+                SettingAutoRecords.Automation theAutomation = AUTO_RECORDS.getItem(automation.telegramId, automation.chatId);
+                theAutomation.preload.with(automation.preload);
+                theAutomation.download.with(automation.download);
+                theAutomation.transfer.with(automation.transfer);
+                log.info("Update auto records success: %s".formatted(automation.uniqueKey()));
             }
         }
         // remove disabled
-        List<SettingAutoRecords.Item> removedItems = new ArrayList<>();
-        autoRecords.items.removeIf(item -> {
+        List<SettingAutoRecords.Automation> removedItems = new ArrayList<>();
+        AUTO_RECORDS.automations.removeIf(item -> {
             if (records.exists(item.telegramId, item.chatId)) {
                 return false;
             }
@@ -88,13 +95,13 @@ public class AutoRecordsHolder {
     }
 
     public Future<Void> saveAutoRecords() {
-        return DataVerticle.settingRepository.<SettingAutoRecords>getByKey(SettingKey.autoDownload)
+        return DataVerticle.settingRepository.<SettingAutoRecords>getByKey(SettingKey.automation)
                 .compose(settingAutoRecords -> {
                     if (settingAutoRecords == null) {
                         settingAutoRecords = new SettingAutoRecords();
                     }
-                    autoRecords.items.forEach(settingAutoRecords::add);
-                    return DataVerticle.settingRepository.createOrUpdate(SettingKey.autoDownload.name(), Json.encode(settingAutoRecords));
+                    AUTO_RECORDS.automations.forEach(settingAutoRecords::add);
+                    return DataVerticle.settingRepository.createOrUpdate(SettingKey.automation.name(), Json.encode(settingAutoRecords));
                 })
                 .onFailure(e -> log.error("Save auto records failed!", e))
                 .mapEmpty();

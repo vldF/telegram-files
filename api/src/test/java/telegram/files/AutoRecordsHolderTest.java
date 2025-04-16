@@ -18,30 +18,33 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class AutoRecordsHolderTest {
-    private AutoRecordsHolder autoRecordsHolder;
+    private AutomationsHolder autoRecordsHolder;
 
     private MockedStatic<TelegramVerticles> telegramVerticlesMockedStatic;
 
     private SettingAutoRecords settingAutoRecords1;
 
-    private SettingAutoRecords.Item item1;
+    private SettingAutoRecords.Automation automation1;
 
     @BeforeEach
     public void setUp() {
-        autoRecordsHolder = AutoRecordsHolder.INSTANCE;
+        autoRecordsHolder = AutomationsHolder.INSTANCE;
         telegramVerticlesMockedStatic = mockStatic(TelegramVerticles.class);
 
         // Prepare test data
         settingAutoRecords1 = new SettingAutoRecords();
-        item1 = new SettingAutoRecords.Item();
-        item1.telegramId = 123L;
-        item1.chatId = 456L;
-        settingAutoRecords1.items.add(item1);
+        automation1 = new SettingAutoRecords.Automation();
+        automation1.telegramId = 123L;
+        automation1.chatId = 456L;
+        automation1.preload = new SettingAutoRecords.PreloadConfig();
+        automation1.download = new SettingAutoRecords.DownloadConfig();
+        automation1.transfer = new SettingAutoRecords.TransferConfig();
+        settingAutoRecords1.automations.add(automation1);
 
         // Mock dependencies
         TelegramVerticle mockTelegramVerticle = mock(TelegramVerticle.class);
         mockTelegramVerticle.authorized = true;
-        when(TelegramVerticles.get(item1.telegramId))
+        when(TelegramVerticles.get(automation1.telegramId))
                 .thenReturn(Optional.of(mockTelegramVerticle));
     }
 
@@ -55,7 +58,7 @@ public class AutoRecordsHolderTest {
         DataVerticle.settingRepository = mock(SettingRepository.class);
 
         // Mock dependencies
-        when(DataVerticle.settingRepository.<SettingAutoRecords>getByKey(SettingKey.autoDownload))
+        when(DataVerticle.settingRepository.<SettingAutoRecords>getByKey(SettingKey.automation))
                 .thenReturn(Future.succeededFuture(settingAutoRecords1));
 
         // Execute
@@ -63,7 +66,7 @@ public class AutoRecordsHolderTest {
 
         // Verify
         assertNotNull(result);
-        assertTrue(autoRecordsHolder.autoRecords().exists(item1.telegramId, item1.chatId));
+        assertTrue(autoRecordsHolder.autoRecords().exists(automation1.telegramId, automation1.chatId));
     }
 
     @Test
@@ -72,7 +75,7 @@ public class AutoRecordsHolderTest {
         autoRecordsHolder.onAutoRecordsUpdate(settingAutoRecords1);
 
         // Verify
-        assertTrue(autoRecordsHolder.autoRecords().exists(item1.telegramId, item1.chatId));
+        assertTrue(autoRecordsHolder.autoRecords().exists(automation1.telegramId, automation1.chatId));
     }
 
     @Test
@@ -83,26 +86,26 @@ public class AutoRecordsHolderTest {
         SettingAutoRecords newRecords = new SettingAutoRecords();
 
         // Mock listener
-        Consumer<List<SettingAutoRecords.Item>> mockListener = mock(Consumer.class);
+        Consumer<List<SettingAutoRecords.Automation>> mockListener = mock(Consumer.class);
         autoRecordsHolder.registerOnRemoveListener(mockListener);
 
         // Execute
         autoRecordsHolder.onAutoRecordsUpdate(newRecords);
 
         // Verify
-        assertFalse(autoRecordsHolder.autoRecords().exists(item1.telegramId, item1.chatId));
+        assertFalse(autoRecordsHolder.autoRecords().exists(automation1.telegramId, automation1.chatId));
         verify(mockListener).accept(argThat(list ->
                 list.size() == 1 &&
-                list.getFirst().telegramId == item1.telegramId &&
-                list.getFirst().chatId == item1.chatId
+                list.getFirst().telegramId == automation1.telegramId &&
+                list.getFirst().chatId == automation1.chatId
         ));
     }
 
     @Test
     public void testRegisterOnRemoveListener() {
         // Prepare test listener
-        List<SettingAutoRecords.Item> receivedItems = new ArrayList<>();
-        Consumer<List<SettingAutoRecords.Item>> listener = receivedItems::addAll;
+        List<SettingAutoRecords.Automation> receivedItems = new ArrayList<>();
+        Consumer<List<SettingAutoRecords.Automation>> listener = receivedItems::addAll;
 
         // Register listener
         autoRecordsHolder.registerOnRemoveListener(listener);
@@ -118,7 +121,7 @@ public class AutoRecordsHolderTest {
         // Verify
         assertFalse(receivedItems.isEmpty());
         assertEquals(1, receivedItems.size());
-        assertEquals(item1.telegramId, receivedItems.getFirst().telegramId);
-        assertEquals(item1.chatId, receivedItems.getFirst().chatId);
+        assertEquals(automation1.telegramId, receivedItems.getFirst().telegramId);
+        assertEquals(automation1.chatId, receivedItems.getFirst().chatId);
     }
 }

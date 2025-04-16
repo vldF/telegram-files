@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 import telegram.files.Transfer.DuplicationPolicy;
 import telegram.files.Transfer.TransferPolicy;
 import telegram.files.repository.FileRecord;
+import telegram.files.repository.SettingAutoRecords;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -31,16 +32,22 @@ class TransferTest {
         mockFileRecord = mock(FileRecord.class);
         mockStatusUpdater = mock(Consumer.class);
 
-        transfer = Transfer.create(TransferPolicy.GROUP_BY_CHAT);
-        transfer.destination = tempDir.toString();
-        transfer.duplicationPolicy = DuplicationPolicy.OVERWRITE;
+        SettingAutoRecords.TransferRule transferRule = new SettingAutoRecords.TransferRule();
+        transferRule.destination = tempDir.toString();
+        transferRule.transferPolicy = TransferPolicy.GROUP_BY_CHAT;
+        transferRule.duplicationPolicy = DuplicationPolicy.OVERWRITE;
+        transfer = Transfer.create(transferRule);
         transfer.transferStatusUpdated = mockStatusUpdater;
     }
 
     @Test
     void testCreateTransfer() {
-        Transfer chatTransfer = Transfer.create(TransferPolicy.GROUP_BY_CHAT);
-        Transfer typeTransfer = Transfer.create(TransferPolicy.GROUP_BY_TYPE);
+        SettingAutoRecords.TransferRule groupByChatRule = new SettingAutoRecords.TransferRule();
+        groupByChatRule.transferPolicy = TransferPolicy.GROUP_BY_CHAT;
+        SettingAutoRecords.TransferRule groupByTypeRule = new SettingAutoRecords.TransferRule();
+        groupByTypeRule.transferPolicy = TransferPolicy.GROUP_BY_TYPE;
+        Transfer chatTransfer = Transfer.create(groupByChatRule);
+        Transfer typeTransfer = Transfer.create(groupByTypeRule);
 
         assertNotNull(chatTransfer);
         assertNotNull(typeTransfer);

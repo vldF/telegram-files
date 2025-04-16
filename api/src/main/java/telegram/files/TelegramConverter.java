@@ -25,10 +25,10 @@ import java.util.function.Function;
 public class TelegramConverter {
 
     public static Future<JsonArray> convertChat(long telegramId, List<TdApi.Chat> chats) {
-        Map<Long, SettingAutoRecords.Item> enableAutoChats = AutoRecordsHolder.INSTANCE.autoRecords().getItems(telegramId);
+        Map<Long, SettingAutoRecords.Automation> enableAutoChats = AutomationsHolder.INSTANCE.autoRecords().getItems(telegramId);
         return Future.succeededFuture(new JsonArray(chats.stream()
                 .map(chat -> {
-                    SettingAutoRecords.Item auto = enableAutoChats.get(chat.id);
+                    SettingAutoRecords.Automation auto = enableAutoChats.get(chat.id);
                     return new JsonObject()
                             .put("id", Convert.toStr(chat.id))
                             .put("name", chat.id == telegramId ? "Saved Messages" : chat.title)
@@ -162,7 +162,7 @@ public class TelegramConverter {
         }
 
         // Put thumbnail information
-        if (thumbnailRecord != null) {
+        if (thumbnailRecord != null && thumbnailRecord.isDownloadStatus(FileRecord.DownloadStatus.completed)) {
             fileObject.put("thumbnailFile", JsonObject.of(
                     "uniqueId", thumbnailRecord.uniqueId(),
                     "mimeType", thumbnailRecord.mimeType(),

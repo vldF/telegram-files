@@ -16,11 +16,13 @@ interface AutoDownloadButtonProps
   auto?: TelegramChat["auto"];
 }
 
-const AutoDownloadButton = React.forwardRef<
+const AutomationButton = React.forwardRef<
   HTMLButtonElement,
   AutoDownloadButtonProps
 >(({ auto, className, ...props }, ref) => {
-  const autoEnabled = auto && (auto.downloadEnabled || auto.preloadEnabled);
+  const autoEnabled =
+    auto &&
+    (auto.preload.enabled || auto.download.enabled || auto.transfer.enabled);
   const isMobile = UseIsMobile();
 
   return (
@@ -31,7 +33,7 @@ const AutoDownloadButton = React.forwardRef<
             ref={ref}
             className={cn(
               "group relative w-32 cursor-pointer overflow-hidden rounded border bg-background p-1 text-center font-semibold",
-              isMobile && "w-full h-10",
+              isMobile && "h-10 w-full",
               className,
             )}
             {...props}
@@ -47,7 +49,9 @@ const AutoDownloadButton = React.forwardRef<
               className={cn(
                 "absolute left-[10%] top-[40%] h-2 w-2 scale-[1] rounded-lg bg-primary transition-all duration-300 group-hover:left-[0%] group-hover:top-[0%] group-hover:h-full group-hover:w-full group-hover:scale-[1.8] group-hover:animate-none group-hover:bg-primary",
                 autoEnabled
-                  ? auto?.downloadEnabled && auto.preloadEnabled
+                  ? auto?.preload.enabled &&
+                    auto.download.enabled &&
+                    auto.transfer.enabled
                     ? "animate-breathing bg-green-500"
                     : "animate-breathing bg-blue-500"
                   : "bg-red-500",
@@ -65,6 +69,6 @@ const AutoDownloadButton = React.forwardRef<
   );
 });
 
-AutoDownloadButton.displayName = "AutoDownloadButton";
+AutomationButton.displayName = "AutoDownloadButton";
 
-export { AutoDownloadButton };
+export { AutomationButton };

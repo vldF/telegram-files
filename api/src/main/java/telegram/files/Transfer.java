@@ -5,8 +5,11 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import telegram.files.repository.FileRecord;
+import telegram.files.repository.SettingAutoRecords;
 
+import java.io.File;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public abstract class Transfer {
@@ -14,6 +17,8 @@ public abstract class Transfer {
     private static final Log log = LogFactory.get();
 
     public String destination;
+
+    public TransferPolicy transferPolicy;
 
     public DuplicationPolicy duplicationPolicy;
 
@@ -23,11 +28,25 @@ public abstract class Transfer {
 
     private FileRecord transferRecord;
 
-    public static Transfer create(TransferPolicy transferPolicy) {
-        return switch (transferPolicy) {
-            case GROUP_BY_CHAT -> new GroupByChat();
-            case GROUP_BY_TYPE -> new GroupByType();
+    public Transfer(SettingAutoRecords.TransferRule transferRule) {
+        this.destination = transferRule.destination;
+        this.transferPolicy = transferRule.transferPolicy;
+        this.duplicationPolicy = transferRule.duplicationPolicy;
+        this.transferHistory = transferRule.transferHistory;
+    }
+
+    public static Transfer create(SettingAutoRecords.TransferRule transferRule) {
+        return switch (transferRule.transferPolicy) {
+            case GROUP_BY_CHAT -> new GroupByChat(transferRule);
+            case GROUP_BY_TYPE -> new GroupByType(transferRule);
         };
+    }
+
+    public boolean isRuleUpdated(SettingAutoRecords.TransferRule transferRule) {
+        return !Objects.equals(this.destination, transferRule.destination)
+                || this.transferPolicy != transferRule.transferPolicy
+                || this.duplicationPolicy != transferRule.duplicationPolicy
+                || this.transferHistory != transferRule.transferHistory;
     }
 
     public void transfer(FileRecord fileRecord) {
@@ -35,6 +54,13 @@ public abstract class Transfer {
         transferRecord = fileRecord;
         transferStatusUpdated.accept(new TransferStatusUpdated(fileRecord, FileRecord.TransferStatus.transferring, null));
         try {
+            File originFile = new File(fileRecord.localPath());
+            if (!originFile.exists()) {
+                log.error("File {} not found: {}", fileRecord.id(), fileRecord.localPath());
+                transferStatusUpdated.accept(new TransferStatusUpdated(fileRecord, FileRecord.TransferStatus.error, null));
+                return;
+            }
+
             String transferPath = getTransferPath(fileRecord);
             boolean isOverwrite = false;
             if (FileUtil.exist(transferPath)) {
@@ -101,6 +127,11 @@ public abstract class Transfer {
     protected abstract String getTransferPath(FileRecord fileRecord);
 
     static class GroupByChat extends Transfer {
+
+        public GroupByChat(SettingAutoRecords.TransferRule transferRule) {
+            super(transferRule);
+        }
+
         @Override
         protected String getTransferPath(FileRecord fileRecord) {
             String name = FileUtil.getName(fileRecord.localPath());
@@ -113,6 +144,11 @@ public abstract class Transfer {
     }
 
     static class GroupByType extends Transfer {
+
+        public GroupByType(SettingAutoRecords.TransferRule transferRule) {
+            super(transferRule);
+        }
+
         @Override
         protected String getTransferPath(FileRecord fileRecord) {
             String name = FileUtil.getName(fileRecord.localPath());

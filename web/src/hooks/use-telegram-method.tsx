@@ -34,8 +34,6 @@ export function useTelegramMethod() {
     if (pendingRequest) {
       pendingRequest.resolve(data);
       pendingRequestsRef.current.delete(code);
-    } else {
-      console.error(`No pending request found for code: ${code}`);
     }
   }, [lastJsonMessage]);
 

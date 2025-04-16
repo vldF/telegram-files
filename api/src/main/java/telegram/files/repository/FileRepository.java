@@ -21,6 +21,8 @@ public interface FileRepository {
 
     Future<FileRecord> getByUniqueId(String uniqueId);
 
+    Future<FileRecord> getMainFileByThread(long telegramId, long threadChatId, long messageThreadId);
+
     Future<String> getCaptionByMediaAlbumId(long mediaAlbumId);
 
     Future<JsonObject> getDownloadStatistics(long telegramId);

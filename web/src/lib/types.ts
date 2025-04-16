@@ -19,10 +19,7 @@ export type TelegramChat = {
   unreadCount?: number;
   lastMessage?: string;
   lastMessageTime?: string;
-  auto?: {
-    preloadEnabled: boolean;
-    downloadEnabled: boolean;
-    rule?: AutoDownloadRule;
+  auto?: Auto & {
     state: number;
   };
 };
@@ -162,6 +159,20 @@ export type Proxy = {
   isEnabled?: boolean;
 };
 
+export type Auto = {
+  preload: {
+    enabled: boolean;
+  };
+  download: {
+    enabled: boolean;
+    rule: AutoDownloadRule;
+  };
+  transfer: {
+    enabled: boolean;
+    rule: AutoTransferRule;
+  };
+};
+
 export const TransferPolices = ["GROUP_BY_CHAT", "GROUP_BY_TYPE"] as const;
 export type TransferPolicy = (typeof TransferPolices)[number];
 export const DuplicationPolicies = [
@@ -172,7 +183,7 @@ export const DuplicationPolicies = [
 ] as const;
 export type DuplicationPolicy = (typeof DuplicationPolicies)[number];
 
-export type TransferRule = {
+export type AutoTransferRule = {
   transferHistory: boolean;
   destination: string;
   transferPolicy: TransferPolicy;
@@ -184,5 +195,4 @@ export type AutoDownloadRule = {
   fileTypes: Array<Exclude<FileType, "media">>;
   downloadHistory: boolean;
   downloadCommentFiles: boolean;
-  transferRule?: TransferRule;
 };

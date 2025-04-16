@@ -23,7 +23,7 @@ public class PreloadMessageVerticle extends AbstractVerticle {
     private final SettingAutoRecords autoRecords;
 
     public PreloadMessageVerticle() {
-        this.autoRecords = AutoRecordsHolder.INSTANCE.autoRecords();
+        this.autoRecords = AutomationsHolder.INSTANCE.autoRecords();
     }
 
     @Override
@@ -38,8 +38,10 @@ public class PreloadMessageVerticle extends AbstractVerticle {
 
                     log.info("""
                             Preload message verticle started!
+                            |History scan interval: %s ms
                             |Auto chats: %s
-                            """.formatted(autoRecords.getPreloadEnabledItems().size()));
+                            """.formatted(HISTORY_SCAN_INTERVAL,
+                            autoRecords.getPreloadEnabledItems().size()));
 
                     startPromise.complete();
                 })
@@ -59,7 +61,7 @@ public class PreloadMessageVerticle extends AbstractVerticle {
         return Future.succeededFuture();
     }
 
-    private void addHistoryMessage(SettingAutoRecords.Item auto, long currentTimeMillis) {
+    private void addHistoryMessage(SettingAutoRecords.Automation auto, long currentTimeMillis) {
         log.debug("Start load history message! TelegramId: %d ChatId: %d".formatted(auto.telegramId, auto.chatId));
         if (System.currentTimeMillis() - currentTimeMillis > MAX_HISTORY_SCAN_TIME) {
             log.debug("Load history message timeout! TelegramId: %d ChatId: %d".formatted(auto.telegramId, auto.chatId));
@@ -69,7 +71,7 @@ public class PreloadMessageVerticle extends AbstractVerticle {
         TelegramVerticle telegramVerticle = TelegramVerticles.getOrElseThrow(auto.telegramId);
         TdApi.SearchChatMessages searchChatMessages = new TdApi.SearchChatMessages();
         searchChatMessages.chatId = auto.chatId;
-        searchChatMessages.fromMessageId = auto.nextFromMessageIdForPreload;
+        searchChatMessages.fromMessageId = auto.preload.nextFromMessageId;
         searchChatMessages.limit = 100;
         TdApi.FoundChatMessages foundChatMessages = Future.await(telegramVerticle.client.execute(searchChatMessages)
                 .onFailure(r -> log.error("Search chat messages failed! TelegramId: %d ChatId: %d".formatted(auto.telegramId, auto.chatId), r))
@@ -96,7 +98,7 @@ public class PreloadMessageVerticle extends AbstractVerticle {
         if (log.isDebugEnabled() && count > 0) {
             log.debug("Load history message success! TelegramId: %d ChatId: %d Count: %d".formatted(auto.telegramId, auto.chatId, count));
         }
-        auto.nextFromMessageIdForPreload = foundChatMessages.nextFromMessageId;
+        auto.preload.nextFromMessageId = foundChatMessages.nextFromMessageId;
         addHistoryMessage(auto, currentTimeMillis);
     }
 

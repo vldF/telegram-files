@@ -22,18 +22,21 @@ import prettyBytes from "pretty-bytes";
 import ChatSelect from "@/components/chat-select";
 import Link from "next/link";
 import TelegramIcon from "@/components/telegram-icon";
-import AutoDownloadDialog from "@/components/auto-download-dialog";
+import AutomationDialog from "@/components/automation-dialog";
 import useIsMobile from "@/hooks/use-is-mobile";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ThemeToggleButton from "@/components/theme-toggle-button";
 import AccountSelect from "@/components/account-select";
+import { useSearchParams } from "next/navigation";
 
 export function Header() {
   const useTelegramAccountProps = useTelegramAccount();
   const { connectionStatus, accountDownloadSpeed } = useWebsocket();
   const isMobile = useIsMobile();
   const [showMore, setShowMore] = useState(false);
+  const searchParams = useSearchParams();
+  const messageThreadId = searchParams.get("messageThreadId");
 
   return (
     <Card className="mb-6">
@@ -52,7 +55,7 @@ export function Header() {
               <>
                 <ChatSelect disabled={!useTelegramAccountProps.accountId} />
 
-                <AutoDownloadDialog />
+                {!messageThreadId && <AutomationDialog />}
               </>
             )}
           </div>

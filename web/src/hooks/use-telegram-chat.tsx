@@ -97,3 +97,11 @@ export function useTelegramChat() {
   }
   return context;
 }
+
+export function useMaybeTelegramChat() {
+  const context = useContext(TelegramChatContext);
+  if (!context) {
+    return undefined;
+  }
+  return context;
+}

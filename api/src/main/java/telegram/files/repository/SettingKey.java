@@ -13,7 +13,7 @@ public enum SettingKey {
     imageLoadSize,
     alwaysHide(Convert::toBool, false),
     showSensitiveContent(Convert::toBool, false),
-    autoDownload(value -> StrUtil.isBlank(value) ? null : new JsonObject(value).mapTo(SettingAutoRecords.class)),
+    automation(value -> StrUtil.isBlank(value) ? null : new JsonObject(value).mapTo(SettingAutoRecords.class)),
     /**
      * Auto download limit for each telegram account
      */

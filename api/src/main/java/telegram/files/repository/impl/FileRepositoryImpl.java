@@ -266,6 +266,26 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
     }
 
     @Override
+    public Future<FileRecord> getMainFileByThread(long telegramId, long threadChatId, long messageThreadId) {
+        return SqlTemplate
+                .forQuery(sqlClient, """
+                        SELECT *
+                        FROM file_record
+                        WHERE telegram_id = #{telegramId}
+                          AND thread_chat_id = #{threadChatId}
+                          AND message_thread_id = #{messageThreadId}
+                          AND chat_id != #{threadChatId}
+                          AND type != 'thumbnail'
+                        LIMIT 1
+                        """)
+                .mapTo(FileRecord.ROW_MAPPER)
+                .execute(Map.of("telegramId", telegramId, "threadChatId", threadChatId, "messageThreadId", messageThreadId))
+                .onFailure(err -> log.error("Failed to get main file record: %s".formatted(err.getMessage()))
+                )
+                .map(rs -> rs.size() > 0 ? rs.iterator().next() : null);
+    }
+
+    @Override
     public Future<String> getCaptionByMediaAlbumId(long mediaAlbumId) {
         if (mediaAlbumId <= 0) {
             return Future.succeededFuture(null);
@@ -465,13 +485,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         }
         return getByUniqueId(uniqueId)
                 .compose(record -> {
-                    if (record == null
-                        // Because if file transfer is completed or message is deleted,
-                        // the telegram client will detect the file and change the download status to paused
-                        || (downloadStatus == FileRecord.DownloadStatus.paused
-                            && (record.isTransferStatus(FileRecord.TransferStatus.completed)
-                                || record.isDownloadStatus(FileRecord.DownloadStatus.completed)))
-                    ) {
+                    if (record == null) {
                         return Future.succeededFuture(null);
                     }
                     boolean pathUpdated = !Objects.equals(record.localPath(), localPath);

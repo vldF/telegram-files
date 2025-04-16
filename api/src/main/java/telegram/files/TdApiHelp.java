@@ -187,8 +187,10 @@ public class TdApiHelp {
             return FileRecord.DownloadStatus.downloading;
         } else if (file.local.isDownloadingCompleted) {
             return FileRecord.DownloadStatus.completed;
+        } else if (file.local.canBeDownloaded) {
+            return FileRecord.DownloadStatus.idle;
         } else {
-            return FileRecord.DownloadStatus.paused;
+            return null;
         }
     }
 

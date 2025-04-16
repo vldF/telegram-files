@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { useTelegramMethod } from "@/hooks/use-telegram-method";
 import { toast } from "@/hooks/use-toast";
-import { useTelegramChat } from "@/hooks/use-telegram-chat";
+import { useMaybeTelegramChat } from "@/hooks/use-telegram-chat";
 
 interface ActionButtonProps {
   tooltipText: string;
@@ -71,7 +71,7 @@ export default function FileControl({
 }) {
   const router = useRouter();
   const { executeMethod, isMethodExecuting } = useTelegramMethod();
-  const { chat } = useTelegramChat();
+  const { chat } = useMaybeTelegramChat() ?? {};
   const showDownloadInfo =
     !hovered &&
     !file.originalDeleted &&

@@ -96,7 +96,7 @@ public class Config {
         }
 
         ConsoleHandler consoleHandler = new ConsoleHandler();
-        consoleHandler.setLevel(Level.FINE);
+        consoleHandler.setLevel(Level.FINEST);
         consoleHandler.setFormatter(new SimpleFormatter());
         rootLogger.addHandler(consoleHandler);
 
@@ -104,7 +104,7 @@ public class Config {
             String logFilePattern = LOG_PATH + File.separator + "api.log";
 
             FileHandler fileHandler = new FileHandler(logFilePattern, 5000000, 3, true);
-            fileHandler.setLevel(Level.FINE);
+            fileHandler.setLevel(Level.FINEST);
             fileHandler.setFormatter(new SimpleFormatter());
             rootLogger.addHandler(fileHandler);
         } catch (IOException e) {

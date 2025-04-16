@@ -123,7 +123,10 @@ export default function ChatSelect({ disabled }: { disabled: boolean }) {
                       className={cn(
                         "h-3 w-1 rounded-md bg-green-500 opacity-0",
                         {
-                          "opacity-100": chat.auto?.downloadEnabled ?? chat.auto?.preloadEnabled,
+                          "opacity-100":
+                            chat.auto?.download.enabled ??
+                            chat.auto?.preload.enabled ??
+                            chat.auto?.transfer.enabled,
                         },
                       )}
                     />

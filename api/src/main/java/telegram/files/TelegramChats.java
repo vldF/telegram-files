@@ -52,6 +52,10 @@ public class TelegramChats {
         return chatList;
     }
 
+    public TdApi.Chat getChat(long chatId) {
+        return chats.get(chatId);
+    }
+
     public void loadMainChatList() {
         synchronized (mainChatList) {
             if (!haveFullMainChatList) {
