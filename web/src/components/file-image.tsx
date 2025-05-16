@@ -124,7 +124,7 @@ export default function FilePreview({
 
     const imageClasses = cn(
       "object-cover rounded",
-      isFullPreview ? "h-auto max-h-screen w-auto object-contain" : "h-16 w-16",
+      isFullPreview ? "h-auto max-h-screen object-contain" : "h-16 w-16",
       isGalleryLayout && "h-72 w-auto object-contain",
       className,
     );
@@ -144,18 +144,6 @@ export default function FilePreview({
       </SpoiledWrapper>
     );
   };
-
-  // 渲染没有图像的文件
-  const renderFileIcon = () => (
-    <div
-      className={cn(
-        "flex h-16 w-16 items-center justify-center rounded bg-muted",
-        className,
-      )}
-    >
-      {getFileIcon(file.type)}
-    </div>
-  );
 
   // 已下载的文件
   if (
@@ -186,6 +174,18 @@ export default function FilePreview({
   if (file.thumbnail) {
     return renderImage(isFullPreview ? 600 : 32, isFullPreview ? 600 : 32, "");
   }
+
+  // 渲染没有图像的文件
+  const renderFileIcon = () => (
+    <div
+      className={cn(
+        "flex h-16 w-16 items-center justify-center rounded bg-muted",
+        className,
+      )}
+    >
+      {getFileIcon(file.type)}
+    </div>
+  );
 
   return renderFileIcon();
 }
