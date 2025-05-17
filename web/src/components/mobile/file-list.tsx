@@ -110,6 +110,10 @@ export default function FileList({ accountId, chatId }: FileListProps) {
           onOpenChange={setIsDrawerOpen}
           file={currentViewFile}
           onFileChange={setCurrentViewFile}
+          onFileTagsClick={(file) => {
+            setCurrentTagsFile(file);
+            setIsTagsDrawerOpen(true);
+          }}
           {...useFilesProps}
         />
       )}

@@ -130,9 +130,11 @@ export default function FileTags({ file, onTagsUpdate }: FileTagsProps) {
 }
 
 export function MobileFileTags({
+  className,
   tags,
   onClick,
 }: {
+  className?: string;
   tags?: string;
   onClick?: () => void;
 }) {
@@ -142,6 +144,7 @@ export function MobileFileTags({
       className={cn(
         "no-scrollbar flex h-6 min-w-6 max-w-20 cursor-pointer items-center space-x-1 overflow-y-scroll text-nowrap rounded-md bg-accent px-1 py-1",
         localTags.length === 0 && "justify-center",
+        className,
       )}
       onClick={(e) => {
         e.stopPropagation();
@@ -183,7 +186,14 @@ export function MobileFileTagsDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} disablePreventScroll={true}>
-      <DrawerContent className="w-full max-w-sm" aria-describedby={undefined}>
+      <DrawerContent
+        className="w-full"
+        aria-describedby={undefined}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
         <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
 
         <div className="p-4">

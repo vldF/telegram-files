@@ -16,6 +16,7 @@ type FileDrawerProps = {
   onOpenChange: (open: boolean) => void;
   file: TelegramFile;
   onFileChange: (file: TelegramFile) => void;
+  onFileTagsClick: (file: TelegramFile) => void;
 } & ReturnType<typeof useFiles>;
 
 export default function FileDrawer({
@@ -23,6 +24,7 @@ export default function FileDrawer({
   onOpenChange,
   file,
   onFileChange,
+  onFileTagsClick,
   hasMore,
   handleLoadMore,
   isLoading,
@@ -60,9 +62,9 @@ export default function FileDrawer({
         const dy = touch.clientY - y;
 
         if (Math.abs(dx) > Math.abs(dy)) {
-          if (dx > 0) {
+          if (dx > 20) {
             handleNavigation(-1);
-          } else if (dx < 0) {
+          } else if (dx < -20) {
             handleNavigation(1);
           }
         }
@@ -157,7 +159,11 @@ export default function FileDrawer({
                 )}
               </div>
             ) : (
-              <FileInfo onView={() => setViewing(true)} file={file} />
+              <FileInfo
+                onView={() => setViewing(true)}
+                file={file}
+                onFileTagsClick={onFileTagsClick}
+              />
             )}
           </motion.div>
         </AnimatePresence>

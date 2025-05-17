@@ -25,13 +25,16 @@ import { Button } from "@/components/ui/button";
 import { MobileFileControl } from "@/components/file-control";
 import React from "react";
 import FileImage from "../file-image";
+import { MobileFileTags } from "@/components/file-tags";
 
 export default function FileInfo({
   file,
   onView,
+  onFileTagsClick,
 }: {
   file: TelegramFile;
   onView: () => void;
+  onFileTagsClick: (file: TelegramFile) => void;
 }) {
   const { downloadProgress } = useFileSpeed(file);
   return (
@@ -68,8 +71,17 @@ export default function FileInfo({
         <Separator className="my-2" />
       </div>
 
-      <div className="space-y-6 p-4">
+      <div className="space-y-6 px-4 max-h-48 overflow-y-auto">
         <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            {file.loaded && (
+              <MobileFileTags
+                className="max-w-fit"
+                tags={file.tags}
+                onClick={() => onFileTagsClick(file)}
+              />
+            )}
+          </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Type className="h-4 w-4" />
