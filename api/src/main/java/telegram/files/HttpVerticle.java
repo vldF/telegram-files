@@ -29,6 +29,7 @@ import io.vertx.ext.web.handler.SessionHandler;
 import io.vertx.ext.web.sstore.LocalSessionStore;
 import io.vertx.ext.web.sstore.SessionStore;
 import org.drinkless.tdlib.TdApi;
+import org.jooq.lambda.function.Function2;
 import telegram.files.repository.SettingAutoRecords;
 import telegram.files.repository.SettingKey;
 import telegram.files.repository.SettingRecord;
@@ -166,6 +167,9 @@ public class HttpVerticle extends AbstractVerticle {
         router.get("/files/count").handler(this::handleFilesCount);
         router.get("/files").handler(this::handleFiles);
         router.post("/files/start-download-multiple").handler(this::handleFileStartDownloadMultiple);
+        router.post("/files/cancel-download-multiple").handler(this::handleFileCancelDownloadMultiple);
+        router.post("/files/toggle-pause-download-multiple").handler(this::handleFileTogglePauseDownloadMultiple);
+        router.post("/files/remove-multiple").handler(this::handleFileRemoveMultiple);
         router.post("/file/:uniqueId/update-tags").handler(this::handleFileTagsUpdate);
 
         router.route()
@@ -566,39 +570,6 @@ public class HttpVerticle extends AbstractVerticle {
                 .onFailure(ctx::fail);
     }
 
-    private void handleFileStartDownloadMultiple(RoutingContext ctx) {
-        JsonObject jsonObject = ctx.body().asJsonObject();
-        JsonArray files = jsonObject.getJsonArray("files");
-        if (CollUtil.isEmpty(files)) {
-            ctx.fail(400);
-            return;
-        }
-        Map<Long, List<Object>> groupingByTelegramId = files.stream()
-                .collect(Collectors.groupingBy(f -> ((JsonObject) f).getLong("telegramId")));
-
-        Future.all(groupingByTelegramId.entrySet()
-                        .stream()
-                        .flatMap(entry -> {
-                            TelegramVerticle telegramVerticle = TelegramVerticles.getOrElseThrow(entry.getKey());
-
-                            return files.stream()
-                                    .map(f -> {
-                                        JsonObject file = (JsonObject) f;
-                                        Long chatId = file.getLong("chatId");
-                                        Long messageId = file.getLong("messageId");
-                                        Integer fileId = file.getInteger("fileId");
-                                        return telegramVerticle.startDownload(chatId, messageId, fileId);
-                                    });
-                        })
-                        .toList()
-                )
-                .onSuccess(ctx::json).onFailure(r -> {
-                    log.error(r, "Failed to start download multiple files");
-                    ctx.json(JsonObject.of("error", "Part of the files failed to start download"));
-                    ctx.response().setStatusCode(400).end();
-                });
-    }
-
     private void handleFileCancelDownload(RoutingContext ctx) {
         TelegramVerticle telegramVerticle = TelegramVerticles.getOrElseThrow(ctx.pathParam("telegramId"));
 
@@ -647,6 +618,86 @@ public class HttpVerticle extends AbstractVerticle {
         telegramVerticle.removeFile(fileId, uniqueId)
                 .onSuccess(r -> ctx.end())
                 .onFailure(ctx::fail);
+    }
+
+    private void handleFileStartDownloadMultiple(RoutingContext ctx) {
+        handleFileMultiple(ctx, (telegramVerticle, file) -> {
+            Long chatId = file.getLong("chatId");
+            Long messageId = file.getLong("messageId");
+            Integer fileId = file.getInteger("fileId");
+            if (chatId == null || messageId == null || fileId == null) {
+                return Future.failedFuture("Invalid parameters");
+            }
+            return telegramVerticle.startDownload(chatId, messageId, fileId);
+        });
+    }
+
+    private void handleFileCancelDownloadMultiple(RoutingContext ctx) {
+        handleFileMultiple(ctx, (telegramVerticle, file) -> {
+            Integer fileId = file.getInteger("fileId");
+            if (fileId == null) {
+                return Future.failedFuture("Invalid parameters");
+            }
+            return telegramVerticle.cancelDownload(fileId);
+        });
+    }
+
+    private void handleFileTogglePauseDownloadMultiple(RoutingContext ctx) {
+        JsonObject jsonObject = ctx.body().asJsonObject();
+        Boolean isPaused = jsonObject.getBoolean("isPaused");
+        if (isPaused == null) {
+            ctx.fail(400);
+            return;
+        }
+
+        handleFileMultiple(ctx, (telegramVerticle, file) -> {
+            Integer fileId = file.getInteger("fileId");
+            if (fileId == null) {
+                return Future.failedFuture("Invalid parameters");
+            }
+            return telegramVerticle.togglePauseDownload(fileId, isPaused);
+        });
+    }
+
+    private void handleFileRemoveMultiple(RoutingContext ctx) {
+        handleFileMultiple(ctx, (telegramVerticle, file) -> {
+            Integer fileId = file.getInteger("fileId");
+            String uniqueId = file.getString("uniqueId");
+            if (fileId == null && StrUtil.isBlank(uniqueId)) {
+                return Future.failedFuture("Invalid parameters");
+            }
+            return telegramVerticle.removeFile(fileId, uniqueId);
+        });
+    }
+
+    private void handleFileMultiple(RoutingContext ctx, Function2<TelegramVerticle, JsonObject, Future<?>> handler) {
+        JsonObject jsonObject = ctx.body().asJsonObject();
+        JsonArray files = jsonObject.getJsonArray("files");
+        if (CollUtil.isEmpty(files)) {
+            ctx.fail(400);
+            return;
+        }
+        Map<Long, List<Object>> groupingByTelegramId = files.stream()
+                .collect(Collectors.groupingBy(f -> ((JsonObject) f).getLong("telegramId")));
+
+        Future.all(groupingByTelegramId.entrySet()
+                        .stream()
+                        .flatMap(entry -> {
+                            TelegramVerticle telegramVerticle = TelegramVerticles.getOrElseThrow(entry.getKey());
+
+                            return files.stream()
+                                    .map(f -> {
+                                        JsonObject file = (JsonObject) f;
+                                        return handler.apply(telegramVerticle, file);
+                                    });
+                        })
+                        .toList()
+                )
+                .onSuccess(ctx::json).onFailure(r -> {
+                    log.error(r, "Failed to start download multiple files");
+                    ctx.json(JsonObject.of("error", "Part of the files failed to start download"));
+                    ctx.response().setStatusCode(400).end();
+                });
     }
 
     private void handleAutoSettingsUpdate(RoutingContext ctx) {

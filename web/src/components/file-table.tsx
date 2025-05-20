@@ -2,12 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import {
-  Download,
-  LoaderCircle,
-  LoaderPinwheel,
-  SquareChevronLeft,
-} from "lucide-react";
+import { LoaderPinwheel, SquareChevronLeft } from "lucide-react";
 import { useFiles } from "@/hooks/use-files";
 import {
   getRowHeightPX,
@@ -19,14 +14,13 @@ import TableColumnFilter, {
 } from "@/components/table-column-filter";
 import { cn } from "@/lib/utils";
 import FileNotFount from "@/components/file-not-found";
-import useSWRMutation from "swr/mutation";
-import { POST } from "@/lib/api";
 import FileRow from "@/components/file-row";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type TelegramFile } from "@/lib/types";
 import FileViewer from "@/components/file-viewer";
 import FileFilters from "./file-filters";
 import { Badge } from "@/components/ui/badge";
+import FileBatchControl from "@/components/file-batch-control";
 
 const COLUMNS: Column[] = [
   {
@@ -101,32 +95,6 @@ export function FileTable({
     TelegramFile | undefined
   >();
   const [viewerOpen, setViewerOpen] = useState(false);
-  const {
-    trigger: startDownloadMultiple,
-    isMutating: startDownloadMultipleMutating,
-  } = useSWRMutation(
-    "/files/start-download-multiple",
-    (
-      key,
-      {
-        arg,
-      }: {
-        arg: {
-          files: Array<{
-            telegramId: number;
-            chatId: number;
-            messageId: number;
-            fileId: number;
-          }>;
-        };
-      },
-    ) => POST(key, arg),
-    {
-      onSuccess: () => {
-        setSelectedFiles(new Set());
-      },
-    },
-  );
   const rowVirtual = useVirtualizer({
     count: files.length,
     getScrollElement: () => tableParentRef.current,
@@ -202,13 +170,7 @@ export function FileTable({
     if (selectedFiles.size === files.length) {
       setSelectedFiles(new Set());
     } else {
-      setSelectedFiles(
-        new Set(
-          files
-            .filter((file) => file.downloadStatus === "idle")
-            .map((file) => file.id),
-        ),
-      );
+      setSelectedFiles(new Set(files.map((file) => file.id)));
     }
   };
 
@@ -269,45 +231,11 @@ export function FileTable({
         />
       )}
       <div className="h-[calc(100vh-13rem)] space-y-4 overflow-hidden">
-        {selectedFiles.size > 0 && (
-          <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4">
-            <span className="text-sm">
-              {selectedFiles.size} {selectedFiles.size === 1 ? "file" : "files"}{" "}
-              selected
-            </span>
-            <Button
-              size="sm"
-              onClick={() => {
-                void startDownloadMultiple({
-                  files: Array.from(selectedFiles).map((id) => {
-                    const file = files.find((f) => f.id === id);
-                    return {
-                      telegramId: file?.telegramId ?? 0,
-                      chatId: file?.chatId ?? 0,
-                      messageId: file?.messageId ?? 0,
-                      fileId: file?.id ?? 0,
-                    };
-                  }),
-                });
-              }}
-              disabled={
-                selectedFiles.size === 0 || startDownloadMultipleMutating
-              }
-            >
-              {startDownloadMultipleMutating ? (
-                <LoaderCircle
-                  className="mr-2 h-4 w-4 animate-spin"
-                  style={{ strokeWidth: "0.8px" }}
-                />
-              ) : (
-                <>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Selected
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+        <FileBatchControl
+          files={files}
+          selectedFiles={selectedFiles}
+          setSelectedFiles={setSelectedFiles}
+        />
 
         <div
           className="relative h-full overflow-auto rounded-md border"
