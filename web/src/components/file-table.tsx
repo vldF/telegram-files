@@ -238,7 +238,7 @@ export function FileTable({
         />
 
         <div
-          className="relative h-full overflow-auto rounded-md border"
+          className="no-scrollbar relative h-full overflow-auto rounded-md border"
           ref={tableParentRef}
         >
           <div className="sticky top-0 z-20 flex h-10 items-center border-b bg-background/90 text-sm text-muted-foreground backdrop-blur-sm">
