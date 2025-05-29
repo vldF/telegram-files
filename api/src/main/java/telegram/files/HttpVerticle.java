@@ -414,19 +414,21 @@ public class HttpVerticle extends AbstractVerticle {
     }
 
     private void handleTelegramFilesCount(RoutingContext ctx) {
+        boolean offline = Convert.toBool(ctx.queryParams().get("offline"), false);
+        Long telegramId = Convert.toLong(ctx.pathParam("telegramId"), -1L);
+        Long chatId = Convert.toLong(ctx.pathParam("chatId"), -1L);
+        if (offline) {
+            DataVerticle.fileRepository.countWithType(telegramId, chatId)
+                    .onSuccess(ctx::json)
+                    .onFailure(ctx::fail);
+            return;
+        }
+
         TelegramVerticle telegramVerticle = getTelegramVerticleByPath(ctx);
         if (telegramVerticle == null) {
             return;
         }
-        String chatIdStr = ctx.pathParam("chatId");
-        if (StrUtil.isBlank(chatIdStr)) {
-            ctx.fail(400);
-            return;
-        }
-        long chatId = Convert.toLong(chatIdStr);
-        boolean offline = Convert.toBool(ctx.queryParams().get("offline"), false);
-        (offline ? DataVerticle.fileRepository.countWithType((Long) telegramVerticle.getId(), chatId)
-                : telegramVerticle.getChatFilesCount(chatId))
+        telegramVerticle.getChatFilesCount(chatId)
                 .onSuccess(ctx::json)
                 .onFailure(ctx::fail);
     }

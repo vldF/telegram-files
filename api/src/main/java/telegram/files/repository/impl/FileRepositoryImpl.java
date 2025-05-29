@@ -476,20 +476,28 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
 
     @Override
     public Future<JsonObject> countWithType(long telegramId, long chatId) {
+        String whereClause = "type != 'thumbnail'";
+        Map<String, Object> params = new HashMap<>();
+        if (telegramId != -1L) {
+            whereClause += " AND telegram_id = #{telegramId}";
+            params.put("telegramId", telegramId);
+        }
+        if (chatId != -1L) {
+            whereClause += " AND chat_id = #{chatId}";
+            params.put("chatId", chatId);
+        }
         return SqlTemplate
                 .forQuery(sqlClient, """
                         SELECT type, COUNT(*) AS count
                         FROM file_record
-                        WHERE telegram_id = #{telegramId}
-                          AND chat_id = #{chatId}
-                          AND type != 'thumbnail'
+                        WHERE %s
                         GROUP BY type
-                        """)
+                        """.formatted(whereClause))
                 .mapTo(row -> new JsonObject()
                         .put("type", row.getString("type"))
                         .put("count", row.getInteger("count"))
                 )
-                .execute(Map.of("telegramId", telegramId, "chatId", chatId))
+                .execute(params)
                 .map(rs -> {
                     JsonObject result = new JsonObject();
                     rs.forEach(item -> result.put(item.getString("type"), item.getInteger("count")));
