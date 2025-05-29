@@ -475,6 +475,30 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
     }
 
     @Override
+    public Future<JsonObject> countWithType(long telegramId, long chatId) {
+        return SqlTemplate
+                .forQuery(sqlClient, """
+                        SELECT type, COUNT(*) AS count
+                        FROM file_record
+                        WHERE telegram_id = #{telegramId}
+                          AND chat_id = #{chatId}
+                          AND type != 'thumbnail'
+                        GROUP BY type
+                        """)
+                .mapTo(row -> new JsonObject()
+                        .put("type", row.getString("type"))
+                        .put("count", row.getInteger("count"))
+                )
+                .execute(Map.of("telegramId", telegramId, "chatId", chatId))
+                .map(rs -> {
+                    JsonObject result = new JsonObject();
+                    rs.forEach(item -> result.put(item.getString("type"), item.getInteger("count")));
+                    return result;
+                })
+                .onFailure(err -> log.error("Failed to count file record by type: %s".formatted(err.getMessage())));
+    }
+
+    @Override
     public Future<JsonObject> updateDownloadStatus(int fileId,
                                                    String uniqueId,
                                                    String localPath,

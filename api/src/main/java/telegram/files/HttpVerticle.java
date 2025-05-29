@@ -424,7 +424,9 @@ public class HttpVerticle extends AbstractVerticle {
             return;
         }
         long chatId = Convert.toLong(chatIdStr);
-        telegramVerticle.getChatFilesCount(chatId)
+        boolean offline = Convert.toBool(ctx.queryParams().get("offline"), false);
+        (offline ? DataVerticle.fileRepository.countWithType((Long) telegramVerticle.getId(), chatId)
+                : telegramVerticle.getChatFilesCount(chatId))
                 .onSuccess(ctx::json)
                 .onFailure(ctx::fail);
     }

@@ -29,7 +29,7 @@ export default function FileTypeFilter({
 }: FileTypeFilterProps) {
   const [localType, setLocalType] = React.useState<FileType | "all">(type);
   const { data: counts, isLoading } = useSWR<Record<FileType, number>>(
-    `/telegram/${telegramId}/chat/${chatId}/files/count`,
+    `/telegram/${telegramId}/chat/${chatId}/files/count?offline=${offline}`,
   );
 
   const handleTypeChange = (value: FileType | "all") => {
