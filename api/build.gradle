@@ -11,17 +11,21 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    vertxVersion = '5.0.0'
+}
+
 dependencies {
     def osName = System.getProperty("os.name").toLowerCase()
 
-    implementation 'io.vertx:vertx-core:4.5.11'
-    implementation 'io.vertx:vertx-web:4.5.11'
-    implementation 'io.vertx:vertx-jdbc-client:4.5.11'
-    implementation 'io.vertx:vertx-sql-client-templates:4.5.11'
-    implementation 'io.vertx:vertx-health-check:4.5.11'
+    implementation "io.vertx:vertx-core:$vertxVersion"
+    implementation "io.vertx:vertx-web:$vertxVersion"
+    implementation "io.vertx:vertx-jdbc-client:$vertxVersion"
+    implementation "io.vertx:vertx-sql-client-templates:$vertxVersion"
+    implementation "io.vertx:vertx-health-check:$vertxVersion"
+    implementation "io.vertx:vertx-pg-client:$vertxVersion"
+    implementation "io.vertx:vertx-mysql-client:$vertxVersion"
     implementation 'org.xerial:sqlite-jdbc:3.47.1.0'
-    implementation 'io.vertx:vertx-pg-client:4.5.11'
-    implementation 'io.vertx:vertx-mysql-client:4.5.11'
     implementation 'com.ongres.scram:client:2.1'
     implementation 'io.agroal:agroal-api:1.16'
     implementation 'io.agroal:agroal-pool:1.16'
@@ -31,7 +35,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.3'
     // only for macos
     if (osName.contains("mac")) {
-        implementation('io.netty:netty-resolver-dns-native-macos:4.1.115.Final') {
+        implementation('io.netty:netty-resolver-dns-native-macos:4.2.0.Final') {
             artifact {
                 name = 'netty-resolver-dns-native-macos'
                 type = 'jar'
@@ -40,7 +44,7 @@ dependencies {
         }
     }
 
-    testImplementation 'io.vertx:vertx-junit5:4.5.11'
+    testImplementation "io.vertx:vertx-junit5:$vertxVersion"
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.mockito:mockito-core:5.15.2'

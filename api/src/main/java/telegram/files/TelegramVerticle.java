@@ -14,7 +14,7 @@ import cn.hutool.log.LogFactory;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.impl.NoStackTraceException;
+import io.vertx.core.VertxException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -285,7 +285,7 @@ public class TelegramVerticle extends AbstractVerticle {
                     }
 
                     TdApiHelp.FileHandler<? extends TdApi.MessageContent> fileHandler = TdApiHelp.getFileHandler(message)
-                            .orElseThrow(() -> new NoStackTraceException("not support message type"));
+                            .orElseThrow(() -> VertxException.noStackTrace("not support message type"));
                     FileRecord fileRecord = fileHandler.convertFileRecord(telegramRecord.id()).withThreadInfo(messageThreadInfo);
                     return DataVerticle.fileRepository.createIfNotExist(fileRecord)
                             .compose(created -> {
@@ -506,7 +506,7 @@ public class TelegramVerticle extends AbstractVerticle {
         return DataVerticle.settingRepository.<SettingProxyRecords>getByKey(SettingKey.proxys)
                 .map(settingProxyRecords -> Optional.ofNullable(settingProxyRecords)
                         .flatMap(r -> r.getProxy(proxyName))
-                        .orElseThrow(() -> new NoStackTraceException("Proxy %s not found".formatted(proxyName)))
+                        .orElseThrow(() -> VertxException.noStackTrace("Proxy %s not found".formatted(proxyName)))
                 )
                 .compose(proxy -> this.getTdProxy(proxy)
                         .map(r -> Tuple.tuple(proxy, r))
@@ -846,7 +846,7 @@ public class TelegramVerticle extends AbstractVerticle {
                     }
 
                     fileRecord = TdApiHelp.getFileHandler(message)
-                            .orElseThrow(() -> new NoStackTraceException("not support message type"))
+                            .orElseThrow(() -> VertxException.noStackTrace("not support message type"))
                             .convertFileRecord(telegramRecord.id())
                             .withThreadInfo(messageThreadInfo);
 

@@ -19,13 +19,13 @@ import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.HealthChecks;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.CorsHandler;
 import io.vertx.ext.web.handler.SessionHandler;
+import io.vertx.ext.web.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.sstore.LocalSessionStore;
 import io.vertx.ext.web.sstore.SessionStore;
 import org.drinkless.tdlib.TdApi;
@@ -116,7 +116,7 @@ public class HttpVerticle extends AbstractVerticle {
         if (!Config.isProd()) {
             router.route()
                     .handler(CorsHandler.create()
-                            .addRelativeOrigin("http://localhost:3000")
+                            .addOrigin("http://localhost:3000")
                             .allowedMethod(HttpMethod.GET)
                             .allowedMethod(HttpMethod.POST)
                             .allowedMethod(HttpMethod.PUT)

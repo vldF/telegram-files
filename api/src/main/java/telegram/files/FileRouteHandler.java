@@ -42,17 +42,15 @@ public class FileRouteHandler {
     private void sendStatic(RoutingContext context, FileSystem fileSystem, String path, String mimeType) {
         // verify if the file exists
         fileSystem
-                .exists(path, exists -> {
-                    if (exists.failed()) {
-                        if (!context.request().isEnded()) {
-                            context.request().resume();
-                        }
-                        context.fail(exists.cause());
-                        return;
+                .exists(path)
+                .onFailure(err -> {
+                    if (!context.request().isEnded()) {
+                        context.request().resume();
                     }
-
-                    // file does not exist, continue...
-                    if (!exists.result()) {
+                    context.fail(err);
+                })
+                .onSuccess(exists -> {
+                    if (!exists) {
                         if (!context.request().isEnded()) {
                             context.request().resume();
                         }
@@ -61,28 +59,25 @@ public class FileRouteHandler {
                     }
 
                     // Need to read the props from the filesystem
-                    fileSystem.props(path, res -> {
-                        if (res.succeeded()) {
-                            FileProps props = res.result();
-                            if (props == null) {
+                    fileSystem.props(path)
+                            .onSuccess(props -> {
+                                if (props == null) {
+                                    if (!context.request().isEnded()) {
+                                        context.request().resume();
+                                    }
+                                    context.next();
+                                } else if (props.isDirectory()) {
+                                    context.next();
+                                } else {
+                                    sendFile(context, path, mimeType, props);
+                                }
+                            })
+                            .onFailure(err -> {
                                 if (!context.request().isEnded()) {
                                     context.request().resume();
                                 }
-                                context.next();
-                            } else if (props.isDirectory()) {
-                                context.next();
-                            } else {
-                                sendFile(context, path, mimeType, props);
-                            }
-                        } else {
-                            if (!context.request().isEnded()) {
-                                context.request().resume();
-                            }
-                            if (LOG.isTraceEnabled()) {
-                                LOG.trace("Failed to read file properties", res.cause());
-                            }
-                        }
-                    });
+                                context.fail(err);
+                            });
                 });
     }
 
@@ -161,16 +156,15 @@ public class FileRouteHandler {
                     }
                 }
 
-                response.sendFile(file, finalOffset, finalLength, res2 -> {
-                    if (res2.failed()) {
-                        if (!context.request().isEnded()) {
-                            context.request().resume();
-                        }
-                        if (LOG.isTraceEnabled()) {
-                            LOG.trace("Failed to send file", res2.cause());
-                        }
-                    }
-                });
+                response.sendFile(file, finalOffset, finalLength)
+                        .onFailure(err -> {
+                            if (!context.request().isEnded()) {
+                                context.request().resume();
+                            }
+                            if (LOG.isTraceEnabled()) {
+                                LOG.trace("Failed to send file", err.getCause());
+                            }
+                        });
             } else {
                 // guess content type
                 if (contentType != null) {
@@ -181,16 +175,15 @@ public class FileRouteHandler {
                     }
                 }
 
-                response.sendFile(file, res2 -> {
-                    if (res2.failed()) {
-                        if (!context.request().isEnded()) {
-                            context.request().resume();
-                        }
-                        if (LOG.isTraceEnabled()) {
-                            LOG.trace("Failed to send file", res2.cause());
-                        }
-                    }
-                });
+                response.sendFile(file)
+                        .onFailure(err -> {
+                            if (!context.request().isEnded()) {
+                                context.request().resume();
+                            }
+                            if (LOG.isTraceEnabled()) {
+                                LOG.trace("Failed to send file", err.getCause());
+                            }
+                        });
             }
         }
     }

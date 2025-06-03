@@ -4,11 +4,7 @@ import cn.hutool.core.lang.Version;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.impl.NoStackTraceException;
+import io.vertx.core.*;
 import io.vertx.jdbcclient.JDBCConnectOptions;
 import io.vertx.jdbcclient.JDBCPool;
 import io.vertx.mysqlclient.MySQLBuilder;
@@ -242,7 +238,7 @@ public class DataVerticle extends AbstractVerticle {
             options.setDatabase("mysql");
             return options;
         } else {
-            throw new NoStackTraceException("Unsupported database type");
+            throw new VertxException("Unsupported database type");
         }
     }
 
@@ -267,7 +263,7 @@ public class DataVerticle extends AbstractVerticle {
                     .connectingTo((SqlConnectOptions) connectOptions)
                     .build();
         } else {
-            throw new NoStackTraceException("Unsupported database type");
+            throw new VertxException("Unsupported database type");
         }
     }
 
@@ -287,7 +283,7 @@ public class DataVerticle extends AbstractVerticle {
                     .connectingTo((SqlConnectOptions) connectOptions)
                     .build();
         } else {
-            throw new NoStackTraceException("Unsupported database type");
+            throw new VertxException("Unsupported database type");
         }
     }
 }

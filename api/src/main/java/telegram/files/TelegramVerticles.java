@@ -8,7 +8,7 @@ import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.NoStackTraceException;
+import io.vertx.core.VertxException;
 import telegram.files.repository.TelegramRecord;
 
 import java.io.File;
@@ -79,7 +79,7 @@ public class TelegramVerticles {
 
     public static TelegramVerticle getOrElseThrow(String telegramId) {
         return get(telegramId)
-                .orElseThrow(() -> new NoStackTraceException("Telegram account not found!"));
+                .orElseThrow(() -> VertxException.noStackTrace("Telegram account not found!"));
     }
 
     public static Optional<TelegramVerticle> get(long telegramId) {
@@ -90,6 +90,6 @@ public class TelegramVerticles {
 
     public static TelegramVerticle getOrElseThrow(long telegramId) {
         return get(telegramId)
-                .orElseThrow(() -> new NoStackTraceException("Telegram account not found!"));
+                .orElseThrow(() -> VertxException.noStackTrace("Telegram account not found!"));
     }
 }

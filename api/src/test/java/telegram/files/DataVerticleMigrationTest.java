@@ -7,7 +7,7 @@ import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.NoStackTraceException;
+import io.vertx.core.VertxException;
 import io.vertx.jdbcclient.JDBCConnectOptions;
 import io.vertx.jdbcclient.JDBCPool;
 import io.vertx.junit5.VertxExtension;
@@ -193,7 +193,7 @@ public class DataVerticleMigrationTest {
                     .onFailure(err -> log.error("Failed to create database: %s".formatted(err.getMessage())))
                     .map(DataVerticle.createSqlClient(vertx, DataVerticle.getSqlConnectOptions()));
         } else {
-            throw new NoStackTraceException("Unsupported database type");
+            throw new VertxException("Unsupported database type");
         }
     }
 
