@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { LoaderPinwheel, SquareChevronLeft } from "lucide-react";
+import { LoaderPinwheel, SquareChevronLeft, WandSparkles } from "lucide-react";
 import { useFiles } from "@/hooks/use-files";
 import {
   getRowHeightPX,
@@ -66,12 +66,14 @@ interface FileTableProps {
   accountId: string;
   chatId: string;
   messageThreadId?: number;
+  link?: string;
 }
 
 export function FileTable({
   accountId,
   chatId,
   messageThreadId,
+  link,
 }: FileTableProps) {
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set());
   const tableParentRef = useRef(null);
@@ -80,7 +82,7 @@ export function FileTable({
     "telegramFileList",
     "m",
   );
-  const useFilesProps = useFiles(accountId, chatId, messageThreadId);
+  const useFilesProps = useFiles(accountId, chatId, messageThreadId, link);
   const {
     filters,
     updateField,
@@ -199,16 +201,25 @@ export function FileTable({
               Back
             </Button>
           )}
-          <Badge variant="outline" className="flex h-full bg-accent">
-            {filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}
-          </Badge>
-          <FileFilters
-            telegramId={accountId}
-            chatId={chatId}
-            filters={filters}
-            onFiltersChange={handleFilterChange}
-            clearFilters={clearFilters}
-          />
+          {link ? (
+            <Badge variant="outline" className="flex h-full bg-accent">
+              <WandSparkles className="mr-2 h-4 w-4" />
+              {link}
+            </Badge>
+          ) : (
+            <>
+              <Badge variant="outline" className="flex h-full bg-accent">
+                {filters.type.charAt(0).toUpperCase() + filters.type.slice(1)}
+              </Badge>
+              <FileFilters
+                telegramId={accountId}
+                chatId={chatId}
+                filters={filters}
+                onFiltersChange={handleFilterChange}
+                clearFilters={clearFilters}
+              />
+            </>
+          )}
         </div>
         <div className="hidden gap-4 md:flex">
           <TableColumnFilter

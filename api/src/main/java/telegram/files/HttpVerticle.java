@@ -404,6 +404,14 @@ public class HttpVerticle extends AbstractVerticle {
             ctx.fail(400);
             return;
         }
+        String link = URLUtil.decode(ctx.queryParams().get("link"));
+        if (StrUtil.isNotBlank(link)) {
+            telegramVerticle.parseLink(link)
+                    .onSuccess(ctx::json)
+                    .onFailure(ctx::fail);
+            return;
+        }
+
         Map<String, String> filter = new HashMap<>();
         ctx.request().params().forEach(filter::put);
         filter.put("search", URLUtil.decode(filter.get("search")));

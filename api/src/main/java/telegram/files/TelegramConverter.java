@@ -44,7 +44,16 @@ public class TelegramConverter {
     }
 
     public static Future<JsonObject> convertFiles(long telegramId, TdApi.FoundChatMessages foundChatMessages) {
-        return DataVerticle.fileRepository.getFilesByUniqueId(TdApiHelp.getFileUniqueIds(Arrays.asList(foundChatMessages.messages)))
+        return convertFiles(telegramId, foundChatMessages.messages)
+                .map(files -> new JsonObject()
+                        .put("files", files)
+                        .put("count", foundChatMessages.totalCount)
+                        .put("size", files.size())
+                        .put("nextFromMessageId", foundChatMessages.nextFromMessageId));
+    }
+
+    public static Future<JsonArray> convertFiles(long telegramId, TdApi.Message[] messages) {
+        return DataVerticle.fileRepository.getFilesByUniqueId(TdApiHelp.getFileUniqueIds(Arrays.asList(messages)))
                 .compose(fileRecords ->
                         FileRecordRetriever.getThumbnails(fileRecords.values())
                                 .map(thumbnails -> Tuple.tuple(fileRecords, thumbnails))
@@ -53,10 +62,10 @@ public class TelegramConverter {
                 .map(t -> {
                     Map<String, FileRecord> fileRecords = t.v1;
                     Map<String, FileRecord> thumbnails = t.v2;
-                    List<TdApi.Message> messages = t.v3 ? TdApiHelp.filterUniqueMessages(Arrays.asList(foundChatMessages.messages))
-                            : Arrays.asList(foundChatMessages.messages);
+                    List<TdApi.Message> filterMessages = t.v3 ? TdApiHelp.filterUniqueMessages(Arrays.asList(messages))
+                            : Arrays.asList(messages);
 
-                    List<JsonObject> fileObjects = messages.stream()
+                    List<JsonObject> fileObjects = filterMessages.stream()
                             .filter(message -> TdApiHelp.FILE_CONTENT_CONSTRUCTORS.contains(message.content.getConstructor()))
                             .map(message -> {
                                 //TODO Processing of the same file under different accounts
@@ -69,11 +78,7 @@ public class TelegramConverter {
                             })
                             .filter(Objects::nonNull)
                             .toList();
-                    return new JsonObject()
-                            .put("files", new JsonArray(fileObjects))
-                            .put("count", foundChatMessages.totalCount)
-                            .put("size", fileObjects.size())
-                            .put("nextFromMessageId", foundChatMessages.nextFromMessageId);
+                    return new JsonArray(fileObjects);
                 });
     }
 

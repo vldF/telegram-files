@@ -251,6 +251,22 @@ public class TelegramVerticle extends AbstractVerticle {
         });
     }
 
+    public Future<JsonObject> parseLink(String link) {
+        return client.execute(new TdApi.GetMessageLinkInfo(link))
+                .compose(messageLinkInfo -> {
+                    if (messageLinkInfo.message == null) {
+                        return Future.failedFuture("Message not found for link: " + link);
+                    }
+                    return TelegramConverter.convertFiles(this.telegramRecord.id(), new TdApi.Message[]{messageLinkInfo.message})
+                            .map(files -> new JsonObject()
+                                    .put("files", files)
+                                    .put("count", files.size())
+                                    .put("size", files.size())
+                                    .put("nextFromMessageId", 0L) // No next message ID for link parsing
+                            );
+                });
+    }
+
     public Future<Tuple2<String, String>> loadPreview(String uniqueId) {
         return DataVerticle.fileRepository
                 .getByUniqueId(uniqueId)

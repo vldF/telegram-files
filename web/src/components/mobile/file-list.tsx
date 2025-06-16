@@ -16,10 +16,11 @@ import { MobileFileTagsDrawer } from "@/components/file-tags";
 interface FileListProps {
   accountId: string;
   chatId: string;
+  link?: string;
 }
 
-export default function FileList({ accountId, chatId }: FileListProps) {
-  const useFilesProps = useFiles(accountId, chatId);
+export default function FileList({ accountId, chatId, link }: FileListProps) {
+  const useFilesProps = useFiles(accountId, chatId, undefined, link);
   const [currentViewFile, setCurrentViewFile] = useState<
     TelegramFile | undefined
   >();
@@ -95,15 +96,17 @@ export default function FileList({ accountId, chatId }: FileListProps) {
 
   return (
     <div className="space-y-4">
-      <DraggableElement>
-        <FileFilters
-          telegramId={accountId}
-          chatId={chatId}
-          filters={filters}
-          onFiltersChange={handleFilterChange}
-          clearFilters={clearFilters}
-        />
-      </DraggableElement>
+      {!link && (
+        <DraggableElement>
+          <FileFilters
+            telegramId={accountId}
+            chatId={chatId}
+            filters={filters}
+            onFiltersChange={handleFilterChange}
+            clearFilters={clearFilters}
+          />
+        </DraggableElement>
+      )}
       {currentViewFile && (
         <FileDrawer
           open={isDrawerOpen}

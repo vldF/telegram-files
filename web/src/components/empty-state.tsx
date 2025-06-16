@@ -39,7 +39,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   if (message) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+      <div className="flex flex-col items-center">
         <MessageSquare className="mb-4 h-16 w-16 text-muted-foreground" />
         <h2 className="mb-2 text-2xl font-semibold">{message}</h2>
         <p className="text-muted-foreground">

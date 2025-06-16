@@ -7,21 +7,24 @@ export default function Files({
   accountId,
   chatId,
   messageThreadId,
+  link,
 }: {
   accountId: string;
   chatId: string;
   messageThreadId?: number;
+  link?: string;
 }) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
-    return <FileList accountId={accountId} chatId={chatId} />;
+    return <FileList accountId={accountId} chatId={chatId} link={link} />;
   } else {
     return (
       <FileTable
         accountId={accountId}
         chatId={chatId}
         messageThreadId={messageThreadId}
+        link={link}
       />
     );
   }
