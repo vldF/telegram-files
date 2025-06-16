@@ -26,7 +26,7 @@ dependencies {
     implementation "io.vertx:vertx-pg-client:$vertxVersion"
     implementation "io.vertx:vertx-mysql-client:$vertxVersion"
     implementation 'org.xerial:sqlite-jdbc:3.47.1.0'
-    implementation 'com.ongres.scram:client:2.1'
+    implementation 'com.ongres.scram:scram-client:3.1'
     implementation 'io.agroal:agroal-api:1.16'
     implementation 'io.agroal:agroal-pool:1.16'
     implementation 'cn.hutool:hutool-core:5.8.34'

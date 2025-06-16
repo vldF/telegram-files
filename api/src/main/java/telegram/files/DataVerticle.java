@@ -8,7 +8,9 @@ import io.vertx.core.*;
 import io.vertx.jdbcclient.JDBCConnectOptions;
 import io.vertx.jdbcclient.JDBCPool;
 import io.vertx.mysqlclient.MySQLBuilder;
+import io.vertx.mysqlclient.MySQLConnectOptions;
 import io.vertx.pgclient.PgBuilder;
+import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.SqlClient;
@@ -43,7 +45,8 @@ public class DataVerticle extends AbstractVerticle {
 
     static {
         if (Config.isPostgres() || Config.isMysql()) {
-            sqlConnectOptions = new SqlConnectOptions()
+            sqlConnectOptions = Config.isPostgres() ? new PgConnectOptions() : new MySQLConnectOptions();
+            sqlConnectOptions
                     .setPort(Config.DB_PORT)
                     .setHost(Config.DB_HOST)
                     .setDatabase(Config.DB_NAME)
