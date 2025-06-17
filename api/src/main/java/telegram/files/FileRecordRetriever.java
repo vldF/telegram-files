@@ -1,5 +1,6 @@
 package telegram.files;
 
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -139,5 +140,35 @@ public class FileRecordRetriever {
 
         return DataVerticle.fileRepository
                 .getFilesByUniqueId(thumbnailUniqueIds);
+    }
+
+    public static Future<TdApi.Message[]> getAlbumMessages(long telegramId, TdApi.Message message) {
+        if (telegramId == 0 || message == null) {
+            return Future.failedFuture("Message is null, unable to get album messages.");
+        }
+        long mediaAlbumId = message.mediaAlbumId;
+        if (mediaAlbumId == 0) {
+            return Future.succeededFuture(new TdApi.Message[]{message});
+        }
+        Optional<TelegramVerticle> telegramVerticleOptional = TelegramVerticles.get(telegramId);
+        if (telegramVerticleOptional.isEmpty()) {
+            return Future.failedFuture("Telegram verticle not found，unable to get the message. telegramId: " + telegramId);
+        }
+
+        TelegramClient telegramClient = telegramVerticleOptional.get().client;
+
+        TdApi.SearchChatMessages searchChatMessages = new TdApi.SearchChatMessages();
+        searchChatMessages.chatId = message.chatId;
+        searchChatMessages.fromMessageId = message.id;
+        searchChatMessages.offset = -10;
+        searchChatMessages.limit = 11; // maximum number of messages to retrieve
+        return telegramClient.execute(searchChatMessages)
+                .map(foundChatMessages -> {
+                    TdApi.Message[] albumMessages = Arrays.stream(foundChatMessages.messages)
+                            .filter(msg -> msg.mediaAlbumId == mediaAlbumId)
+                            .toArray(TdApi.Message[]::new);
+                    ArrayUtil.insert(albumMessages, 0, message); // include the original message
+                    return albumMessages;
+                });
     }
 }
