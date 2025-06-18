@@ -32,11 +32,12 @@
 
 ## 📍 Overview
 
-* Support for downloading files from telegram channels and groups.
-* Support multiple telegram accounts for downloading files.
-* Support suspending and resuming downloads, and auto transfer files to other destinations.
-* Preview of downloaded videos and pictures.
-* Responsive design supports mobile access, PWAs, and offline access.
+* Seamless file downloads from Telegram channels and groups
+* Support for multiple Telegram accounts to manage and download files simultaneously
+* Pause and resume downloads anytime, with automatic file transfer to designated destinations
+* Instant preview of downloaded videos and images
+* Fully responsive design with mobile-friendly access, Progressive Web App (PWA) support, and offline capabilities
+* Easily fetch files from Telegram shared links
 
 ---
 
