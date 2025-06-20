@@ -94,14 +94,17 @@ public class FileRecordRetriever {
                     return telegramVerticleOptional
                             .get()
                             .client
-                            .execute(new TdApi.GetMessages(chatId, messageIds))
-                            .map(m -> createMessageMap(chatId, m.messages, records));
+                            .execute(new TdApi.GetMessages(chatId, messageIds), true)
+                            .map(m -> m == null ? Collections.emptyMap() : createMessageMap(chatId, m.messages, records));
                 })
                 .collect(Collectors.toList())
         ).map(compositeFuture -> {
             Map<String, TdApi.Message> combinedMessageMap = new HashMap<>();
             for (int i = 0; i < compositeFuture.size(); i++) {
                 Map<String, TdApi.Message> partialMessageMap = compositeFuture.resultAt(i);
+                if (partialMessageMap == null || partialMessageMap.isEmpty()) {
+                    continue;
+                }
                 combinedMessageMap.putAll(partialMessageMap);
             }
             return combinedMessageMap;
