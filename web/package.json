@@ -62,7 +62,7 @@
     "react-hook-form": "^7.53.2",
     "react-use-websocket": "^4.11.1",
     "recharts": "^2.15.0",
-    "spoiled": "^0.3.2",
+    "spoiled": "^0.4.0",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

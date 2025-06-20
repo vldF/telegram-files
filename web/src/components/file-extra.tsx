@@ -32,7 +32,7 @@ function FileName({ file, ellipsis }: FileExtraProps) {
     return null;
   }
   return (
-    <SpoiledWrapper hasSensitiveContent={file.hasSensitiveContent}>
+    <SpoiledWrapper hasSensitiveContent={file.hasSensitiveContent} className="h-5">
       <p className="flex items-center gap-2">
         <Mountain className="h-4 w-4 flex-shrink-0" />
         <span
@@ -53,7 +53,7 @@ function FileCaption({ file, rowHeight, ellipsis }: FileExtraProps) {
     return null;
   }
   return (
-    <SpoiledWrapper hasSensitiveContent={file.hasSensitiveContent}>
+    <SpoiledWrapper hasSensitiveContent={file.hasSensitiveContent} className="h-5">
       <Tooltip>
         <TooltipTrigger>
           <div className="flex items-center gap-2">
@@ -90,30 +90,32 @@ function FilePath({ file, ellipsis, rowHeight }: FileExtraProps) {
     return null;
   }
   return (
-    <Tooltip>
-      <TooltipTrigger>
-        <div className="flex items-center gap-2 text-sm">
-          <FileCheck className="h-4 w-4 flex-shrink-0" />
-          <p
-            className={cn(
-              "group cursor-pointer overflow-hidden text-nowrap rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800",
-              rowHeight === "l" && "text-wrap",
-              ellipsis && "line-clamp-1",
-              isMobile && "px-0",
-            )}
-            onClick={() => !isMobile && copyToClipboard(file.localPath)}
-          >
-            {file.localPath.split("/").pop()}
-            <Copy className="ml-1 inline-flex h-4 w-4 opacity-0 group-hover:opacity-100" />
-          </p>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent>
-        <div className="max-w-80 overflow-y-scroll text-wrap rounded">
-          {file.localPath}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+    <SpoiledWrapper hasSensitiveContent={file.hasSensitiveContent} className="h-5">
+      <Tooltip>
+        <TooltipTrigger>
+          <div className="flex items-center gap-2 text-sm">
+            <FileCheck className="h-4 w-4 flex-shrink-0" />
+            <p
+              className={cn(
+                "group cursor-pointer overflow-hidden text-nowrap rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800",
+                rowHeight === "l" && "text-wrap",
+                ellipsis && "line-clamp-1",
+                isMobile && "px-0",
+              )}
+              onClick={() => !isMobile && copyToClipboard(file.localPath)}
+            >
+              {file.localPath.split("/").pop()}
+              <Copy className="ml-1 inline-flex h-4 w-4 opacity-0 group-hover:opacity-100" />
+            </p>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="max-w-80 overflow-y-scroll text-wrap rounded">
+            {file.localPath}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </SpoiledWrapper>
   );
 }
 
