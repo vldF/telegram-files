@@ -168,6 +168,10 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
         boolean customSort = StrUtil.isNotBlank(sort) && StrUtil.isNotBlank(order);
         if (customSort) {
             orderBy = "%s %s".formatted(sort, order);
+            if (Objects.equals(sort, "completion_date")) {
+                // For completion_date, we need to ensure the date is in milliseconds
+                whereClause += " AND completion_date IS NOT NULL";
+            }
         }
         if (fromMessageId > 0) {
             params.put("fromMessageId", fromMessageId);
