@@ -505,6 +505,12 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 .map(rs -> {
                     JsonObject result = new JsonObject();
                     rs.forEach(item -> result.put(item.getString("type"), item.getInteger("count")));
+                    // Calculate media types, which includes photo, video.
+                    int mediaCount = rs.stream()
+                            .filter(item -> Objects.equals(item.getString("type"), "photo") || Objects.equals(item.getString("type"), "video"))
+                            .mapToInt(item -> item.getInteger("count"))
+                            .sum();
+                    result.put("media", mediaCount);
                     return result;
                 })
                 .onFailure(err -> log.error("Failed to count file record by type: %s".formatted(err.getMessage())));
