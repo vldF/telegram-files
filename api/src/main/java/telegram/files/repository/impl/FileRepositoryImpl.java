@@ -163,7 +163,6 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 params.put("maxSize", maxSize);
             }
         }
-        String countClause = whereClause;
         String orderBy = "message_id DESC";
         boolean customSort = StrUtil.isNotBlank(sort) && StrUtil.isNotBlank(order);
         if (customSort) {
@@ -186,6 +185,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 whereClause += " AND message_id < #{fromMessageId}";
             }
         }
+        String countClause = whereClause;
         log.trace("Get files with where: %s params: %s".formatted(whereClause, params));
         return Future.all(
                 SqlTemplate
