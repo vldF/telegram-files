@@ -218,18 +218,25 @@ interface SizeFilterProps {
   onChange: (range: [number, number], unit: "KB" | "MB" | "GB") => void;
 }
 
-const SizeFilter = ({ sizeRange, onChange }: SizeFilterProps) => {
+const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
   const defaultRange: [number, number] = [0, 1000];
   const [localRange, setLocalRange] = useState<[number, number]>(
     sizeRange ?? defaultRange,
   );
-  const [localUnit, setLocalUnit] = useState<"KB" | "MB" | "GB">("MB");
+  const [localUnit, setLocalUnit] = useState<"KB" | "MB" | "GB">(
+    sizeUnit ?? "MB",
+  );
 
   const handleChange = (newValue: number[]) => {
     const range: [number, number] = [newValue[0]!, newValue[1]!];
     setLocalRange(range);
     onChange(range, localUnit);
   };
+
+  const handleUnitChange = (unit: "KB" | "MB" | "GB") => {
+    setLocalUnit(unit);
+    onChange(localRange, unit);
+  }
 
   return (
     <div className="space-y-4">
@@ -246,21 +253,21 @@ const SizeFilter = ({ sizeRange, onChange }: SizeFilterProps) => {
               <Button
                 size="sm"
                 variant={localUnit === "KB" ? "default" : "outline"}
-                onClick={() => setLocalUnit("KB")}
+                onClick={() => handleUnitChange("KB")}
               >
                 KB
               </Button>
               <Button
                 size="sm"
                 variant={localUnit === "MB" ? "default" : "outline"}
-                onClick={() => setLocalUnit("MB")}
+                onClick={() => handleUnitChange("MB")}
               >
                 MB
               </Button>
               <Button
                 size="sm"
                 variant={localUnit === "GB" ? "default" : "outline"}
-                onClick={() => setLocalUnit("GB")}
+                onClick={() => handleUnitChange("GB")}
               >
                 GB
               </Button>
