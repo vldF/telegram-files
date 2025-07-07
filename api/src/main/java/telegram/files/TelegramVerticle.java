@@ -411,7 +411,7 @@ public class TelegramVerticle extends AbstractVerticle {
         return client.execute(new TdApi.GetFile(fileId))
                 .otherwise((TdApi.File) null)
                 .compose(file -> DataVerticle.fileRepository
-                        .getByUniqueId(file.remote.uniqueId)
+                        .getByUniqueId(uniqueId)
                         .map(fileRecord -> Tuple.tuple(file, fileRecord))
                 )
                 .compose(tuple2 -> {
@@ -430,6 +430,11 @@ public class TelegramVerticle extends AbstractVerticle {
                     if (file != null && file.local != null && StrUtil.isNotBlank(file.local.path)) {
                         return client.execute(new TdApi.DeleteFile(fileId))
                                 .map(file);
+                    } else if (!fileRecord.isTransferStatus(FileRecord.TransferStatus.completed)
+                               && StrUtil.isNotBlank(fileRecord.localPath())) {
+                        if (FileUtil.del(fileRecord.localPath())) {
+                            log.debug("[%s] Remove file success: %s".formatted(this.getRootId(), fileRecord.localPath()));
+                        }
                     }
                     return Future.succeededFuture(file);
                 })
