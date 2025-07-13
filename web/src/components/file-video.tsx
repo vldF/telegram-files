@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Loader2,
   Maximize,
   Minimize,
   Pause,
@@ -309,12 +310,16 @@ const FileVideo = ({
   onVolumeChange?: (volume: number) => void;
   className?: string;
 }) => {
+  const videoWidth = file.extra?.width ?? 480;
+  const videoHeight = file.extra?.height ?? 270;
+  const aspectRatio = videoWidth / videoHeight;
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -328,6 +333,7 @@ const FileVideo = ({
   const [previewPos, setPreviewPos] = useState(0);
   const [isPreviewReady, setIsPreviewReady] = useState(false);
   const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const url = `${getApiUrl()}/${file.telegramId}/file/${file.uniqueId}`;
 
@@ -347,6 +353,25 @@ const FileVideo = ({
     return () => {
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       previewVideo.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleWaiting = () => setLoading(true);
+    const handlePlaying = () => setLoading(false);
+    const handleCanPlay = () => setLoading(false);
+
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("canplay", handleCanPlay);
+
+    return () => {
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("canplay", handleCanPlay);
     };
   }, []);
 
@@ -408,6 +433,9 @@ const FileVideo = ({
 
   const togglePlay = () => {
     if (videoRef.current) {
+      if (!isPreviewReady) {
+        return;
+      }
       if (isPlaying) {
         videoRef.current.pause();
       } else {
@@ -438,6 +466,37 @@ const FileVideo = ({
       setIsMuted(newVolume === 0);
       onVolumeChange?.(newVolume);
     }
+  };
+
+  const handleError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    setError(true);
+    const videoElement = e.currentTarget;
+    console.error("Video playback error：", {
+      code: videoElement.error?.code,
+      message: videoElement.error?.message,
+      src: videoElement.currentSrc,
+    });
+    // Set a user-friendly error message based on the error code
+    let message = "Video loading failed！";
+    if (videoElement.error) {
+      switch (videoElement.error.code) {
+        case 1:
+          message = "ABORTED";
+          break;
+        case 2:
+          message = "NETWORK ERROR";
+          break;
+        case 3:
+          message = "DECODE ERROR";
+          break;
+        case 4:
+          message = "SRC NOT SUPPORTED";
+          break;
+        default:
+          message = "UNKNOWN ERROR";
+      }
+    }
+    setErrorMessage(message);
   };
 
   const toggleMute = () => {
@@ -478,26 +537,44 @@ const FileVideo = ({
   };
 
   if (error) {
-    return <VideoErrorFallback className="h-full min-h-[200px] w-full" />;
+    return (
+      <VideoErrorFallback
+        className="h-full min-h-[200px] w-full"
+        message={errorMessage}
+      />
+    );
   }
 
   return (
     <motion.div
       ref={containerRef}
+      style={{
+        aspectRatio: aspectRatio,
+        maxWidth: videoWidth,
+        maxHeight: videoHeight,
+        position: "relative",
+        background: "#000",
+      }}
       className={cn(
-        "group relative w-full overflow-hidden bg-black",
+        "group relative w-full min-w-[30rem] overflow-hidden bg-black",
         isMobile && "flex h-screen w-screen items-center",
       )}
       onClick={isMobile ? () => setShowControls((prev) => !prev) : undefined}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
+      {!isPreviewReady && file.thumbnailFile && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-white" />
+        </div>
+      )}
+
       <video
         ref={videoRef}
         autoPlay={isMobile}
         onPlay={() => isMobile && !isPlaying && setIsPlaying(true)}
         onEnded={handleEnded}
-        onError={() => setError(true)}
+        onError={handleError}
         src={url}
         playsInline
         className={cn("max-h-[calc(100vh-5rem)] w-full", className)}
@@ -512,6 +589,12 @@ const FileVideo = ({
           className="hidden"
           preload="auto"
         />
+      )}
+
+      {loading && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-white" />
+        </div>
       )}
 
       <AnimatePresence>
