@@ -463,7 +463,7 @@ export default function FileFilters({
           <Filter className="h-5 w-5" />
           {!isMobile && "Filters"}
           {filterCount > 0 && (
-            <span className="absolute left-0 top-0 -ml-1 -mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+            <span className="absolute left-0 top-0 -ml-1 -mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white">
               {filterCount}
             </span>
           )}

@@ -172,6 +172,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 whereClause += " AND completion_date IS NOT NULL";
             }
         }
+        String countClause = whereClause;
         if (fromMessageId > 0) {
             params.put("fromMessageId", fromMessageId);
             if (customSort) {
@@ -185,7 +186,6 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 whereClause += " AND message_id < #{fromMessageId}";
             }
         }
-        String countClause = whereClause;
         log.trace("Get files with where: %s params: %s".formatted(whereClause, params));
         return Future.all(
                 SqlTemplate

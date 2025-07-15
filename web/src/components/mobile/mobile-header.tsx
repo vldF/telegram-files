@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ChevronsLeftRightEllipsisIcon,
-  CloudDownloadIcon,
+  Download,
   Ellipsis,
   GalleryHorizontal,
   List,
@@ -71,12 +71,16 @@ export function MobileHeader() {
             <TelegramIcon className="h-6 w-6" />
           </Link>
 
-          <div className="flex items-center gap-2 overflow-hidden text-sm text-muted-foreground">
-            <span className="flex-1 text-nowrap">
-              {`${prettyBytes(accountDownloadSpeed, { bits: true })}/s`}
-            </span>
-            <CloudDownloadIcon className="h-4 w-4 flex-shrink-0" />
-          </div>
+          {accountDownloadSpeed !== 0 ? (
+            <div className="flex items-center gap-2 overflow-hidden text-sm text-muted-foreground">
+              <span className="flex-1 text-nowrap">
+                {`${prettyBytes(accountDownloadSpeed, { bits: true })}/s`}
+              </span>
+              <Download className="h-4 w-4 flex-shrink-0" />
+            </div>
+          ) : (
+            <h3 className="text-lg font-semibold">Telegram File Manager</h3>
+          )}
 
           <MenuDrawer />
         </div>

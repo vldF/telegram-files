@@ -556,8 +556,8 @@ const FileVideo = ({
         background: "#000",
       }}
       className={cn(
-        "group relative w-full min-w-[30rem] overflow-hidden bg-black",
-        isMobile && "flex h-screen w-screen items-center",
+        "group relative w-full overflow-hidden bg-black",
+        isMobile ? "flex h-screen w-screen items-center" : "min-w-[30rem]",
       )}
       onClick={isMobile ? () => setShowControls((prev) => !prev) : undefined}
       onMouseEnter={() => setShowControls(true)}

@@ -26,6 +26,12 @@ import { MobileFileControl } from "@/components/file-control";
 import React from "react";
 import FileImage from "../file-image";
 import { MobileFileTags } from "@/components/file-tags";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function FileInfo({
   file,
@@ -67,92 +73,98 @@ export default function FileInfo({
         )}
       </DrawerHeader>
 
-      <div className="px-2">
-        <Separator className="my-2" />
+      <div className="px-2 pb-1">
+        <Separator />
       </div>
 
-      <div className="space-y-6 px-4 max-h-48 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            {file.loaded && (
-              <MobileFileTags
-                className="max-w-fit"
-                tags={file.tags}
-                onClick={() => onFileTagsClick(file)}
-              />
-            )}
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Type className="h-4 w-4" />
-              <span>Type</span>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="file-info" className="border-none">
+          <AccordionTrigger className="px-4 py-1 text-sm font-semibold hover:no-underline">
+            <div className="col-span-2">
+              {file.loaded && (
+                <MobileFileTags
+                  className="max-w-fit"
+                  tags={file.tags}
+                  onClick={() => onFileTagsClick(file)}
+                />
+              )}
             </div>
-            <Badge variant="secondary" className="text-xs">
-              {file.type}
-            </Badge>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <HardDrive className="h-4 w-4" />
-              <span>Size</span>
-            </div>
-            <Badge variant="secondary" className="text-xs">
-              {prettyBytes(file.size)}
-            </Badge>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>Received At</span>
-            </div>
-            <Badge variant="secondary" className="text-xs">
-              {formatDistanceToNow(new Date(file.date * 1000), {
-                addSuffix: true,
-              })}
-            </Badge>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Download className="h-4 w-4" />
-              <span>Downloaded Size</span>
-            </div>
-            <Badge variant="secondary" className="text-xs">
-              {prettyBytes(file.downloadedSize)}
-            </Badge>
-          </div>
-
-          {file.downloadStatus !== "idle" && file.startDate !== 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock10 className="h-4 w-4" />
-                <span>Download At</span>
+          </AccordionTrigger>
+          <AccordionContent className="max-h-40 space-y-6 overflow-y-auto px-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Type className="h-4 w-4" />
+                  <span>Type</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {file.type}
+                </Badge>
               </div>
-              <Badge variant="secondary" className="text-xs">
-                {formatDistanceToNow(new Date(file.startDate), {
-                  addSuffix: true,
-                })}
-              </Badge>
-            </div>
-          )}
 
-          {file.completionDate && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ClockArrowDown className="h-4 w-4" />
-                <span>Completion At</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <HardDrive className="h-4 w-4" />
+                  <span>Size</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {prettyBytes(file.size)}
+                </Badge>
               </div>
-              <Badge variant="secondary" className="text-xs">
-                {formatDistanceToNow(new Date(file.completionDate), {
-                  addSuffix: true,
-                })}
-              </Badge>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Received At</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {formatDistanceToNow(new Date(file.date * 1000), {
+                    addSuffix: true,
+                  })}
+                </Badge>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Download className="h-4 w-4" />
+                  <span>Downloaded Size</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {prettyBytes(file.downloadedSize)}
+                </Badge>
+              </div>
+
+              {file.downloadStatus !== "idle" && file.startDate !== 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock10 className="h-4 w-4" />
+                    <span>Download At</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {formatDistanceToNow(new Date(file.startDate), {
+                      addSuffix: true,
+                    })}
+                  </Badge>
+                </div>
+              )}
+
+              {file.completionDate && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <ClockArrowDown className="h-4 w-4" />
+                    <span>Completion At</span>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {formatDistanceToNow(new Date(file.completionDate), {
+                      addSuffix: true,
+                    })}
+                  </Badge>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <DrawerFooter>
         {file.downloadStatus === "completed" &&

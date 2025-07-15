@@ -21,11 +21,15 @@ export function TagsSelector({
   const selectedsContainerRef = useRef<HTMLDivElement>(null);
 
   const removeSelectedTag = (tag: string) => {
-    setSelectedTags((prev) => prev.filter((t) => tag !== t));
+    const newTags = selectedTags.filter((t) => tag !== t);
+    setSelectedTags(newTags);
+    onChange?.(newTags);
   };
 
   const addSelectedTag = (tag: string) => {
-    setSelectedTags((prev) => [...prev, tag]);
+    const newTags = [...selectedTags, tag];
+    setSelectedTags(newTags);
+    onChange?.(newTags);
   };
 
   const optionalTags = useMemo(() => {
@@ -44,10 +48,8 @@ export function TagsSelector({
   }, [selectedTags]);
 
   useEffect(() => {
-    if (onChange && !isEqual(value, selectedTags)) {
-      onChange(selectedTags);
-    }
-  }, [selectedTags, onChange, value]);
+    setSelectedTags(value);
+  }, [value]);
 
   return (
     <div className="flex w-full max-w-lg flex-col">
