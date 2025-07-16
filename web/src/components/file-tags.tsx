@@ -18,6 +18,85 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+function useBatchUpdateTags({
+  files,
+  onTagsUpdate,
+}: {
+  files: TelegramFile[];
+  onTagsUpdate?: (tags: string[]) => void;
+}) {
+  const [tags, setTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    const allTags = files.flatMap((file) => split(",", file.tags ?? ""));
+    setTags(Array.from(new Set(allTags)));
+  }, [files]);
+
+  const { trigger, isMutating } = useSWRMutation(
+    "/files/update-tags",
+    (
+      key,
+      {
+        arg,
+      }: {
+        arg: {
+          files: Array<{
+            telegramId: number;
+            chatId: number;
+            messageId: number;
+            uniqueId: string;
+            fileId: number;
+          }>;
+          tags: string;
+        };
+      },
+    ) => POST(key, arg),
+    {
+      onSuccess: () => {
+        onTagsUpdate?.(tags);
+        toast({
+          variant: "success",
+          description: "Tags updated successfully",
+        });
+      },
+    },
+  );
+
+  const toggleUpdateTags = async () => {
+    await trigger({
+      files: files.map((file) => ({
+        telegramId: file.telegramId ?? 0,
+        chatId: file.chatId ?? 0,
+        messageId: file.messageId ?? 0,
+        uniqueId: file.uniqueId ?? "",
+        fileId: file.id ?? 0,
+      })),
+      tags: tags.join(","),
+    });
+  };
+
+  const [debounceMutating] = useDebounce(isMutating, 200, {
+    leading: true,
+    maxWait: 400,
+  });
+
+  return {
+    tags,
+    setTags,
+    toggleUpdateTags,
+    isMutating: debounceMutating,
+  };
+}
 
 function useUpdateTags({
   file,
@@ -224,5 +303,66 @@ export function MobileFileTagsDrawer({
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+interface BatchFileTagsProps {
+  files: TelegramFile[];
+  onTagsUpdate?: (tags: string[]) => void;
+}
+
+export function BatchFileTags({ files, onTagsUpdate }: BatchFileTagsProps) {
+  const { settings } = useSettings();
+  const [open, setOpen] = useState(false);
+  const { tags, setTags, toggleUpdateTags, isMutating } = useBatchUpdateTags({
+    files,
+    onTagsUpdate: handleTagsUpdate,
+  });
+
+  if (files.length === 0) {
+    return null;
+  }
+
+  function handleTagsUpdate(newTags: string[]) {
+    onTagsUpdate?.(newTags);
+    if (open) {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Tag className="mr-2 h-4 w-4" />
+          Edit Tags
+          {`(${files.length})`}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="w-full max-w-md">
+        <DialogTitle>Edit Tags</DialogTitle>
+        <DialogDescription>
+          {`You can edit tags for ${files.length} files at once. This will update the
+            tags for all selected files.`}
+        </DialogDescription>
+        <TagsSelector
+          value={tags}
+          onChange={setTags}
+          tags={split(",", settings?.tags)}
+        />
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+          <Button onClick={() => toggleUpdateTags()}>
+            {isMutating ? (
+              <LoaderIcon className="h-4 w-4 animate-spin text-gray-500 dark:text-gray-400" />
+            ) : (
+              "Submit"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

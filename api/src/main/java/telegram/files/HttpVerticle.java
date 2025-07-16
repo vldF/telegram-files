@@ -170,6 +170,7 @@ public class HttpVerticle extends AbstractVerticle {
         router.post("/files/cancel-download-multiple").handler(this::handleFileCancelDownloadMultiple);
         router.post("/files/toggle-pause-download-multiple").handler(this::handleFileTogglePauseDownloadMultiple);
         router.post("/files/remove-multiple").handler(this::handleFileRemoveMultiple);
+        router.post("/files/update-tags").handler(this::handleFileTagsUpdateMultiple);
         router.post("/file/:uniqueId/update-tags").handler(this::handleFileTagsUpdate);
 
         router.route()
@@ -682,6 +683,22 @@ public class HttpVerticle extends AbstractVerticle {
         });
     }
 
+    private void handleFileTagsUpdateMultiple(RoutingContext ctx) {
+        JsonObject jsonObject = ctx.body().asJsonObject();
+        String tags = jsonObject.getString("tags");
+        if (StrUtil.isBlank(tags)) {
+            ctx.fail(400);
+            return;
+        }
+        handleFileMultiple(ctx, (telegramVerticle, file) -> {
+            String uniqueId = file.getString("uniqueId");
+            if (StrUtil.isBlank(uniqueId)) {
+                return Future.failedFuture("Invalid parameters");
+            }
+            return DataVerticle.fileRepository.updateTags(uniqueId, tags);
+        });
+    }
+
     private void handleFileMultiple(RoutingContext ctx, Function2<TelegramVerticle, JsonObject, Future<?>> handler) {
         JsonObject jsonObject = ctx.body().asJsonObject();
         JsonArray files = jsonObject.getJsonArray("files");
@@ -706,9 +723,10 @@ public class HttpVerticle extends AbstractVerticle {
                         .toList()
                 )
                 .onSuccess(ctx::json).onFailure(r -> {
-                    log.error(r, "Failed to start download multiple files");
-                    ctx.json(JsonObject.of("error", "Part of the files failed to start download"));
-                    ctx.response().setStatusCode(400).end();
+                    log.error(r, "Failed to handle multiple files: %s".formatted(r.getMessage()));
+                    ctx.response()
+                            .setStatusCode(400)
+                            .end(JsonObject.of("error", "Part of the files failed to process: %s".formatted(r.getMessage())).encode());
                 });
     }
 

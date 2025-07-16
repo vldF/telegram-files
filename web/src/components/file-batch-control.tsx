@@ -21,17 +21,23 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { BatchFileTags } from "@/components/file-tags";
 
 interface FileBatchControlProps {
   selectedFiles: Set<number>;
   setSelectedFiles: (files: Set<number>) => void;
   files: TelegramFile[];
+  updateField?: (
+    uniqueId: string,
+    patch: Partial<TelegramFile>,
+  ) => Promise<void>;
 }
 
 export default function FileBatchControl({
   selectedFiles,
   setSelectedFiles,
   files,
+  updateField,
 }: FileBatchControlProps) {
   const selectedFileObjects = Array.from(selectedFiles)
     .map((id) => files.find((f) => f.id === id))
@@ -53,6 +59,7 @@ export default function FileBatchControl({
   const deletableCounts = selectedFileObjects.filter(
     (file) => file.downloadStatus === "completed",
   ).length;
+  const loadedFiles = selectedFileObjects.filter((file) => file.loaded);
 
   const controlButtons = [
     {
@@ -106,6 +113,16 @@ export default function FileBatchControl({
     },
   ];
 
+  const handleTagsUpdate = (tags: string[]) => {
+    if (updateField) {
+      loadedFiles.forEach((file) => {
+        const newTags = tags.join(",");
+        void updateField(file.uniqueId, { tags: newTags });
+        setSelectedFiles(new Set());
+      });
+    }
+  };
+
   // Filter buttons to only show those that have at least one valid file
   const visibleButtons = controlButtons.filter(
     (button) => button.validCount > 0,
@@ -120,6 +137,12 @@ export default function FileBatchControl({
             selected
           </span>
           <div className="flex flex-wrap gap-2">
+            {loadedFiles.length > 0 && (
+              <BatchFileTags
+                files={loadedFiles}
+                onTagsUpdate={handleTagsUpdate}
+              />
+            )}
             {visibleButtons.map((button) => (
               <ControlButton
                 key={button.label}

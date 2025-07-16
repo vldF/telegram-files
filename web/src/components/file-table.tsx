@@ -246,6 +246,7 @@ export function FileTable({
           files={files}
           selectedFiles={selectedFiles}
           setSelectedFiles={setSelectedFiles}
+          updateField={updateField}
         />
 
         <div
