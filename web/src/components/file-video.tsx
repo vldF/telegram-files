@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "@/lib/utils";
 import useIsMobile from "@/hooks/use-is-mobile";
 import * as SliderPrimitive from "@radix-ui/react-slider";
+import { SafeBottomWrapper } from "@/components/safe-bottom-wrapper";
 
 const VideoErrorFallback = ({
   className = "",
@@ -550,8 +551,8 @@ const FileVideo = ({
       ref={containerRef}
       style={{
         aspectRatio: aspectRatio,
-        maxWidth: videoWidth,
-        maxHeight: videoHeight,
+        maxWidth: isMobile ? "100vw" : videoWidth,
+        maxHeight: isMobile ? "100vh" : videoHeight,
         position: "relative",
         background: "#000",
       }}
@@ -607,19 +608,21 @@ const FileVideo = ({
             exit={{ opacity: 0, y: 20 }}
             className={cn(
               "absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4",
-              isMobile && "bg-gray-900 bg-opacity-20 pb-16",
+              isMobile && "bg-gray-900 bg-opacity-20",
             )}
           >
             {isMobile ? (
-              <MobileControls
-                isPlaying={isPlaying}
-                currentTime={currentTime}
-                duration={duration}
-                onPlayPause={togglePlay}
-                onSeek={handleSeek}
-                onSkipForward={handleSkipForward}
-                onSkipBackward={handleSkipBackward}
-              />
+              <SafeBottomWrapper>
+                <MobileControls
+                  isPlaying={isPlaying}
+                  currentTime={currentTime}
+                  duration={duration}
+                  onPlayPause={togglePlay}
+                  onSeek={handleSeek}
+                  onSkipForward={handleSkipForward}
+                  onSkipBackward={handleSkipBackward}
+                />
+              </SafeBottomWrapper>
             ) : (
               <DesktopControls
                 isPlaying={isPlaying}
