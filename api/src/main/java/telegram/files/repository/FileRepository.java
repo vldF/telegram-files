@@ -25,6 +25,8 @@ public interface FileRepository {
 
     Future<String> getCaptionByMediaAlbumId(long mediaAlbumId);
 
+    Future<Long> getReactionCountByMediaAlbumId(long mediaAlbumId);
+
     Future<JsonObject> getDownloadStatistics(long telegramId);
 
     Future<JsonObject> getDownloadStatistics();
@@ -47,7 +49,7 @@ public interface FileRepository {
 
     Future<Void> updateFileId(int fileId, String uniqueId);
 
-    Future<Integer> updateCaptionByMediaAlbumId(long mediaAlbumId, String caption);
+    Future<Integer> updateAlbumDataByMediaAlbumId(long mediaAlbumId, String caption, long reactionCount);
 
     Future<Void> updateTags(String uniqueId, String tags);
 

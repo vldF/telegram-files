@@ -46,11 +46,11 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                                                 size, downloaded_size,
                                                 type, mime_type,
                                                 file_name, thumbnail, thumbnail_unique_id, caption, extra, local_path,
-                                                download_status, start_date, transfer_status, tags, thread_chat_id, message_thread_id)
+                                                download_status, start_date, transfer_status, tags, thread_chat_id, message_thread_id, reaction_count)
                         values (#{id}, #{unique_id}, #{telegram_id}, #{chat_id}, #{message_id}, #{media_album_id}, #{date},
                                 #{has_sensitive_content}, #{size}, #{downloaded_size}, #{type},
                                 #{mime_type}, #{file_name}, #{thumbnail}, #{thumbnail_unique_id}, #{caption}, #{extra}, #{local_path},
-                                #{download_status}, #{start_date}, #{transfer_status}, #{tags}, #{thread_chat_id}, #{message_thread_id})
+                                #{download_status}, #{start_date}, #{transfer_status}, #{tags}, #{thread_chat_id}, #{message_thread_id}, #{reaction_count})
                         """)
                 .mapFrom(FileRecord.PARAM_MAPPER)
                 .execute(fileRecord)
@@ -59,7 +59,7 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                     if (Objects.equals(r.type(), "thumbnail")) {
                         return Future.succeededFuture(r);
                     } else {
-                        return this.updateCaptionByMediaAlbumId(fileRecord.mediaAlbumId(), fileRecord.caption()).map(r);
+                        return this.updateAlbumDataByMediaAlbumId(fileRecord.mediaAlbumId(), fileRecord.caption(), fileRecord.reactionCount()).map(r);
                     }
                 })
                 .onSuccess(r -> log.trace("Successfully created file record: %s".formatted(fileRecord.id())))
@@ -302,6 +302,21 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
                 .execute(Map.of("mediaAlbumId", mediaAlbumId))
                 .map(rs -> rs.size() > 0 ? rs.iterator().next() : null)
                 .onFailure(err -> log.error("Failed to get caption: %s".formatted(err.getMessage())));
+    }
+
+    @Override
+    public Future<Long> getReactionCountByMediaAlbumId(long mediaAlbumId) {
+        if (mediaAlbumId <= 0) {
+            return Future.succeededFuture(0L);
+        }
+        return SqlTemplate
+                .forQuery(sqlClient, """
+                        SELECT reaction_count FROM file_record WHERE media_album_id = #{mediaAlbumId} LIMIT 1
+                        """)
+                .mapTo(row -> row.getLong("reaction_count"))
+                .execute(Map.of("mediaAlbumId", mediaAlbumId))
+                .map(rs -> rs.size() > 0 ? rs.iterator().next() : 0L)
+                .onFailure(err -> log.error("Failed to get reaction count: %s".formatted(err.getMessage())));
     }
 
     @Override
@@ -639,35 +654,52 @@ public class FileRepositoryImpl extends AbstractSqlRepository implements FileRep
     }
 
     @Override
-    public Future<Integer> updateCaptionByMediaAlbumId(long mediaAlbumId, String caption) {
+    public Future<Integer> updateAlbumDataByMediaAlbumId(long mediaAlbumId, String caption, long reactionCount) {
         if (mediaAlbumId <= 0) {
             return Future.succeededFuture(0);
         }
 
-        return Future.<String>future(promise -> {
-            if (StrUtil.isBlank(caption)) {
-                this.getCaptionByMediaAlbumId(mediaAlbumId)
-                        .onComplete(result -> {
-                            if (result.succeeded()) {
-                                promise.complete(result.result());
-                            } else {
-                                promise.complete(null);
-                            }
-                        });
-            } else {
-                promise.complete(caption);
-            }
-        }).compose(theCaption -> {
-            if (StrUtil.isBlank(theCaption)) {
+        return Future.all(Future.future(promise -> {
+                    if (StrUtil.isBlank(caption)) {
+                        this.getCaptionByMediaAlbumId(mediaAlbumId)
+                                .onComplete(result -> {
+                                    if (result.succeeded()) {
+                                        promise.complete(result.result());
+                                    } else {
+                                        promise.complete(null);
+                                    }
+                                });
+                    } else {
+                        promise.complete(caption);
+                    }
+                }), Future.future(promise -> {
+                    if (reactionCount > 0) {
+                        promise.complete(reactionCount);
+                    } else {
+                        this.getReactionCountByMediaAlbumId(mediaAlbumId)
+                                .onComplete(result -> {
+                                    if (result.succeeded()) {
+                                        promise.complete(result.result());
+                                    } else {
+                                        promise.complete(0L);
+                                    }
+                                });
+                    }
+                })
+        ).compose(r -> {
+            String theCaption = r.resultAt(0);
+            long theReactionCount = r.resultAt(1);
+            if (StrUtil.isBlank(theCaption) && theReactionCount <= 0) {
                 return Future.succeededFuture(0);
             }
             return SqlTemplate
                     .forUpdate(sqlClient, """
-                            UPDATE file_record SET caption = #{caption} WHERE media_album_id = #{mediaAlbumId}
+                            UPDATE file_record SET caption = #{caption},
+                                                   reaction_count = #{reactionCount}
+                                               WHERE media_album_id = #{mediaAlbumId}
                             """)
-                    .execute(Map.of("mediaAlbumId", mediaAlbumId, "caption", theCaption))
-                    .onFailure(err -> log.error("Failed to update file record: %s".formatted(err.getMessage()))
-                    )
+                    .execute(Map.of("mediaAlbumId", mediaAlbumId, "caption", theCaption, "reactionCount", theReactionCount))
+                    .onFailure(err -> log.error("Failed to update file record: %s".formatted(err.getMessage())))
                     .map(SqlResult::rowCount);
         });
     }

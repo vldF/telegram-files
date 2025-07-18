@@ -12,6 +12,8 @@ import { useFileSpeed } from "@/hooks/use-file-speed";
 import { Progress } from "@/components/ui/progress";
 import FileImage from "./file-image";
 import FileTags from "@/components/file-tags";
+import { Badge } from "@/components/ui/badge";
+import { TooltipWrapper } from "@/components/ui/tooltip";
 
 type FileRowProps = {
   index: number;
@@ -55,9 +57,16 @@ export default function FileRow({
   const columnRenders: Record<string, ReactNode> = {
     content: (
       <div
-        className="flex cursor-pointer items-center justify-center gap-2"
+        className="relative flex cursor-pointer items-center justify-center gap-2"
         onClick={onFileClick}
       >
+        {file.reactionCount > 0 && (
+          <TooltipWrapper content="Reaction Count">
+            <Badge className="absolute -left-1 -top-1.5 z-10 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-blue-500 text-sm hover:bg-blue-600">
+              {file.reactionCount}
+            </Badge>
+          </TooltipWrapper>
+        )}
         <FileImage file={file} className={dynamicClass.content} />
       </div>
     ),

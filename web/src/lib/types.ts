@@ -63,6 +63,7 @@ export type TelegramFile = {
   threadChatId: number;
   messageThreadId: number;
   hasReply?: boolean;
+  reactionCount: number;
 
   prev?: TelegramFile;
   next?: TelegramFile;
@@ -113,6 +114,8 @@ export type TDFile = {
   };
 };
 
+export type SortFields = "date" | "completion_date" | "size" | "reaction_count";
+
 export type FileFilter = {
   search: string;
   type: FileType | "all";
@@ -124,7 +127,7 @@ export type FileFilter = {
   dateRange?: [string, string];
   sizeRange?: [number, number];
   sizeUnit?: "KB" | "MB" | "GB";
-  sort?: "date" | "completion_date" | "size";
+  sort?: SortFields;
   order?: "asc" | "desc";
 };
 

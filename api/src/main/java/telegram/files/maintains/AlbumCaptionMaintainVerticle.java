@@ -78,7 +78,7 @@ public class AlbumCaptionMaintainVerticle extends MaintainVerticle {
                 }
 
                 for (FileRecord fileRecord : rows) {
-                    int updated = Future.await(DataVerticle.fileRepository.updateCaptionByMediaAlbumId(fileRecord.mediaAlbumId(), fileRecord.caption()));
+                    int updated = Future.await(DataVerticle.fileRepository.updateAlbumDataByMediaAlbumId(fileRecord.mediaAlbumId(), fileRecord.caption(), fileRecord.reactionCount()));
                     count += updated;
                 }
 

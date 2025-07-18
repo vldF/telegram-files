@@ -95,6 +95,8 @@ export function useFiles(
         params.set("fromSortField", lastFile!.completionDate.toString());
       } else if (filters.sort === "date") {
         params.set("fromSortField", lastFile!.date.toString());
+      } else if (filters.sort === "reaction_count") {
+        params.set("fromSortField", lastFile!.reactionCount.toString());
       }
     }
     return `${url}?${params.toString()}`;

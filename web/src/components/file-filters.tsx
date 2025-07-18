@@ -8,11 +8,12 @@ import {
   Filter,
   X,
 } from "lucide-react";
-import type {
-  DownloadStatus,
-  FileFilter,
-  FileType,
-  TransferStatus,
+import {
+  type DownloadStatus,
+  type FileFilter,
+  type FileType,
+  type SortFields,
+  type TransferStatus,
 } from "@/lib/types";
 import { Button } from "./ui/button";
 import {
@@ -236,7 +237,7 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
   const handleUnitChange = (unit: "KB" | "MB" | "GB") => {
     setLocalUnit(unit);
     onChange(localRange, unit);
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -304,12 +305,9 @@ const SizeFilter = ({ sizeRange, sizeUnit, onChange }: SizeFilterProps) => {
 };
 
 interface SortFilterProps {
-  sort: "date" | "completion_date" | "size" | undefined;
+  sort: SortFields | undefined;
   order: "asc" | "desc" | undefined;
-  onChange: (
-    sort: "date" | "completion_date" | "size",
-    order: "asc" | "desc",
-  ) => void;
+  onChange: (sort: SortFields, order: "asc" | "desc") => void;
 }
 
 const SortFilter = ({ sort, order, onChange }: SortFilterProps) => {
@@ -320,6 +318,7 @@ const SortFilter = ({ sort, order, onChange }: SortFilterProps) => {
     { value: "date", label: "Sent Date" },
     { value: "completion_date", label: "Downloaded Date" },
     { value: "size", label: "File Size" },
+    { value: "reaction_count", label: "Reaction Count" },
   ] as const;
 
   return (
@@ -432,10 +431,7 @@ export default function FileFilters({
     setLocalFilters((prev) => ({ ...prev, sizeRange, sizeUnit }));
   };
 
-  const handleSortChange = (
-    sort: "date" | "completion_date" | "size",
-    order: "asc" | "desc",
-  ) => {
+  const handleSortChange = (sort: SortFields, order: "asc" | "desc") => {
     setLocalFilters((prev) => ({ ...prev, sort, order }));
   };
 

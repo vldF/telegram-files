@@ -253,6 +253,17 @@ public class TdApiHelp {
             return thumbnail.file.remote.uniqueId;
         }
 
+        public long getReactionCount() {
+            TdApi.MessageReaction[] reactions = BeanUtil.getProperty(message, "interactionInfo.reactions.reactions");
+            if (reactions == null || reactions.length == 0) {
+                return 0L;
+            }
+
+            return Arrays.stream(reactions)
+                    .mapToLong(reaction -> reaction.totalCount)
+                    .sum();
+        }
+
         public FileRecord convertThumbnailRecord(long telegramId) {
             TdApi.Thumbnail thumbnail = getThumbnail();
             if (thumbnail == null) {
@@ -284,6 +295,7 @@ public class TdApiHelp {
                     System.currentTimeMillis(),
                     null,
                     null,
+                    0L,
                     0L,
                     0L
             );
@@ -334,7 +346,8 @@ public class TdApiHelp {
                     null,
                     null,
                     0L,
-                    0L
+                    0L,
+                    getReactionCount()
             );
         }
 
@@ -396,7 +409,8 @@ public class TdApiHelp {
                     null,
                     null,
                     0L,
-                    0L
+                    0L,
+                    getReactionCount()
             );
         }
 
@@ -464,7 +478,8 @@ public class TdApiHelp {
                     null,
                     null,
                     0L,
-                    0L
+                    0L,
+                    getReactionCount()
             );
         }
 
@@ -527,7 +542,8 @@ public class TdApiHelp {
                     null,
                     null,
                     0L,
-                    0L
+                    0L,
+                    getReactionCount()
             );
         }
 
