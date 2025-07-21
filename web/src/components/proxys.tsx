@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Copy, Edit2, Plus, Trash2 } from "lucide-react";
+import { Copy, Plus, SquarePen, Trash } from "lucide-react";
 import { type Proxy } from "@/lib/types";
 import { cn, parseProxyString } from "@/lib/utils";
 import useSWRMutation from "swr/mutation";
@@ -59,6 +59,7 @@ export default function Proxys({
     port: 0,
     username: "",
     password: "",
+    secret: "",
     type: "http",
   });
   const { trigger: triggerProxy, isMutating: isToggleProxyMutating } =
@@ -107,6 +108,7 @@ export default function Proxys({
         port: 0,
         username: "",
         password: "",
+        secret: "",
         type: "http",
       },
     );
@@ -212,7 +214,7 @@ export default function Proxys({
                 className="h-6 w-6"
                 onClick={() => handleOpenDialog(proxy)}
               >
-                <Edit2 className="h-3 w-3" />
+                <SquarePen className="h-3 w-3" />
               </Button>
               <Button
                 size="icon"
@@ -220,7 +222,7 @@ export default function Proxys({
                 className="h-6 w-6"
                 onClick={() => handleDeleteProxy(proxy)}
               >
-                <Trash2 className="h-3 w-3 text-red-600" />
+                <Trash className="h-3 w-3 text-red-600" />
               </Button>
             </CardFooter>
           </Card>
@@ -294,6 +296,23 @@ export default function Proxys({
                     SOCKS5
                   </span>
                 </label>
+
+                <label className="flex cursor-pointer items-center">
+                  <input
+                    type="radio"
+                    name="type"
+                    value="mtproto"
+                    checked={formState.type === "mtproto"}
+                    onChange={handleInputChange}
+                    className="peer hidden"
+                  />
+                  <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-gray-300 peer-checked:border-primary peer-checked:bg-primary">
+                    <div className="h-2.5 w-2.5 rounded-full bg-white"></div>
+                  </div>
+                  <span className="text-gray-400 peer-checked:text-primary">
+                    MTProto
+                  </span>
+                </label>
               </div>
             </div>
 
@@ -337,29 +356,45 @@ export default function Proxys({
               </div>
             </div>
             <Label className="mb-2 block">Authentication (optional)</Label>
-            <div>
-              <label className="block text-xs font-medium text-gray-500">
-                Username
-              </label>
-              <Input
-                name="username"
-                value={formState.username}
-                onChange={handleInputChange}
-                placeholder="Enter username"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500">
-                Password
-              </label>
-              <Input
-                name="password"
-                type="password"
-                value={formState.password}
-                onChange={handleInputChange}
-                placeholder="Enter password"
-              />
-            </div>
+            {formState.type === "mtproto" ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-500">
+                  Secret
+                </label>
+                <Input
+                  name="secret"
+                  value={formState.secret}
+                  onChange={handleInputChange}
+                  placeholder="Enter secret"
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500">
+                    Username
+                  </label>
+                  <Input
+                    name="username"
+                    value={formState.username}
+                    onChange={handleInputChange}
+                    placeholder="Enter username"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500">
+                    Password
+                  </label>
+                  <Input
+                    name="password"
+                    type="password"
+                    value={formState.password}
+                    onChange={handleInputChange}
+                    placeholder="Enter password"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={handleCloseDialog} variant="outline">
@@ -415,6 +450,8 @@ function ProxyParser({ onParsed }: { onParsed: (proxys: Proxy) => void }) {
               <code>http://username:password@server:port</code>
               <br />
               <code>socks://username:password@server:port</code>
+              <br />
+              <code>mtproto://server:port?secret=your_secret</code>
             </p>
           </div>
         </TooltipContent>

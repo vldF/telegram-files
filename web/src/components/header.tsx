@@ -3,17 +3,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ChevronsLeftRightEllipsisIcon,
-  CloudDownloadIcon,
+  Download,
   Ellipsis,
   Home,
   UnplugIcon,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
+import { TooltipWrapper } from "./ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { useWebsocket } from "@/hooks/use-websocket";
 import { useTelegramAccount } from "@/hooks/use-telegram-account";
@@ -61,44 +56,32 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex max-w-20 items-center gap-2 overflow-hidden text-sm text-muted-foreground">
-                    <span className="flex-1 text-nowrap">
-                      {`${prettyBytes(accountDownloadSpeed, { bits: true })}/s`}
-                    </span>
-                    <CloudDownloadIcon className="h-4 w-4 flex-shrink-0" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Current account download speed</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {accountDownloadSpeed !== 0 && (
+              <TooltipWrapper content="Current account download speed">
+                <div className="flex max-w-20 items-center gap-2 overflow-hidden text-sm text-muted-foreground">
+                  <span className="flex-1 text-nowrap">
+                    {`${prettyBytes(accountDownloadSpeed, { bits: true })}/s`}
+                  </span>
+                  <Download className="h-4 w-4 flex-shrink-0" />
+                </div>
+              </TooltipWrapper>
+            )}
 
             {connectionStatus && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant={
-                        connectionStatus === "Open" ? "default" : "secondary"
-                      }
-                    >
-                      {connectionStatus === "Open" ? (
-                        <ChevronsLeftRightEllipsisIcon className="mr-1 h-4 w-4" />
-                      ) : (
-                        <UnplugIcon className="mr-1 h-4 w-4" />
-                      )}
-                      {connectionStatus}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>WebSocket connection status</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <TooltipWrapper content="WebSocket connection status">
+                <Badge
+                  variant={
+                    connectionStatus === "Open" ? "default" : "secondary"
+                  }
+                >
+                  {connectionStatus === "Open" ? (
+                    <ChevronsLeftRightEllipsisIcon className="mr-1 h-4 w-4" />
+                  ) : (
+                    <UnplugIcon className="mr-1 h-4 w-4" />
+                  )}
+                  {connectionStatus}
+                </Badge>
+              </TooltipWrapper>
             )}
 
             <ThemeToggleButton />

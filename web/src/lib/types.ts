@@ -158,7 +158,8 @@ export type Proxy = {
   port: number;
   username: string;
   password: string;
-  type: "http" | "socks5";
+  secret: string;
+  type: "http" | "socks5" | "mtproto";
   isEnabled?: boolean;
 };
 

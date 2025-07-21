@@ -545,12 +545,13 @@ public class TelegramVerticle extends AbstractVerticle {
                     }
 
                     TdApi.ProxyType proxyType;
-                    if (Objects.equals(proxy.type, "http")) {
-                        proxyType = new TdApi.ProxyTypeHttp(proxy.username, proxy.password, false);
-                    } else if (Objects.equals(proxy.type, "socks5")) {
-                        proxyType = new TdApi.ProxyTypeSocks5(proxy.username, proxy.password);
-                    } else {
-                        return Future.failedFuture("Unsupported proxy type: %s".formatted(proxy.type));
+                    switch (proxy.type) {
+                        case "http" -> proxyType = new TdApi.ProxyTypeHttp(proxy.username, proxy.password, false);
+                        case "socks5" -> proxyType = new TdApi.ProxyTypeSocks5(proxy.username, proxy.password);
+                        case "mtproto" -> proxyType = new TdApi.ProxyTypeMtproto(proxy.secret);
+                        case null, default -> {
+                            return Future.failedFuture("Unsupported proxy type: %s".formatted(proxy.type));
+                        }
                     }
                     return edit ? client.execute(new TdApi.EditProxy(tdProxy.id, proxy.server, proxy.port, true, proxyType))
                             : client.execute(new TdApi.AddProxy(proxy.server, proxy.port, true, proxyType));

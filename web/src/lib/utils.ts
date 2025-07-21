@@ -7,7 +7,27 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function parseProxyString(proxyString: string): Proxy | null {
-  const proxyRegex = /^(http|socks|socks5):\/\/(([^:]+):([^@]+)@)?([^:]+):(\d+)$/i;
+  // 匹配 mtproto 格式：mtproto://server:port?secret=xxx
+  const mtprotoRegex = /^mtproto:\/\/([^:]+):(\d+)(\?secret=([^&]+))?$/i;
+  const mtprotoMatch = mtprotoRegex.exec(proxyString);
+  if (mtprotoMatch) {
+    const server = mtprotoMatch[1] ?? "";
+    const port = parseInt(mtprotoMatch[2] ?? "0", 10);
+    const secret = mtprotoMatch[4] ?? "";
+
+    return {
+      name: "mtproto proxy",
+      server,
+      port,
+      username: "",
+      password: "",
+      secret,
+      type: "mtproto",
+    };
+  }
+
+  const proxyRegex =
+    /^(http|socks|socks5):\/\/(([^:]+):([^@]+)@)?([^:]+):(\d+)$/i;
   const match = proxyRegex.exec(proxyString);
 
   if (!match) {
@@ -31,6 +51,7 @@ export function parseProxyString(proxyString: string): Proxy | null {
     port,
     username,
     password,
+    secret: "",
     type: type as "http" | "socks5",
   };
 }

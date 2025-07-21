@@ -25,15 +25,33 @@ public class SettingProxyRecords {
 
         public String password;
 
+        public String secret;
+
         /**
-         * http, socks5
+         * http, socks5, mtproto
          */
         public String type;
 
         public boolean equalsTdProxy(TdApi.Proxy proxy) {
+            if (proxy == null) {
+                return false;
+            }
+
             return Objects.equals(server, proxy.server)
                    && port == proxy.port
-                   && (Objects.equals(type, "http") ? proxy.type instanceof TdApi.ProxyTypeHttp : proxy.type instanceof TdApi.ProxyTypeSocks5);
+                   && Objects.equals(type, convertType(proxy.type));
+        }
+
+        public String convertType(TdApi.ProxyType type) {
+            if (type == null) {
+                return null;
+            }
+            return switch (type) {
+                case TdApi.ProxyTypeHttp ignored -> "http";
+                case TdApi.ProxyTypeSocks5 ignored -> "socks5";
+                case TdApi.ProxyTypeMtproto ignored -> "mtproto";
+                default -> null;
+            };
         }
 
     }
