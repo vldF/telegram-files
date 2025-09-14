@@ -90,7 +90,7 @@ export default function FileControl({
   } = useFileControl(file);
 
   const removeBtnProps: ActionButtonProps = {
-    onClick: () => remove(file.id),
+    onClick: () => remove(file.id, file.uniqueId),
     tooltipText: "Remove",
     icon: <FileX className={iconSize} />,
     loading: removing,

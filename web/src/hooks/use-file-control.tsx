@@ -64,9 +64,9 @@ export function useFileControl(file: TelegramFile) {
         });
       }
     },
-    remove: (fileId: number) => {
+    remove: (fileId: number, uniqueId: string) => {
       if (file) {
-        void removeFile({ fileId, uniqueId: file.uniqueId });
+        void removeFile({ fileId, uniqueId });
       }
     },
     cancelling,
