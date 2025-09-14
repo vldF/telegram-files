@@ -25,9 +25,6 @@ jobs:
           - runner: ubuntu-latest
             platform: linux/amd64
             platform_tag: linux-amd64
-          - runner: [ self-hosted, linux, ARM64 ]
-            platform: linux/arm64
-            platform_tag: linux-arm64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
