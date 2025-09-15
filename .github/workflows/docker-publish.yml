@@ -8,8 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  GHCR_REPO: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: "telegram-files"
 
 permissions:
   contents: read
@@ -26,6 +25,13 @@ jobs:
             platform: linux/amd64
             platform_tag: linux-amd64
     steps:
+      - name: Format repo slug
+        uses: actions/github-script@v4
+        id: repo_slug
+        with:
+          result-encoding: string
+          script: return `ghcr.io/${github.repository.toLowerCase()}`
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -47,7 +53,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5.5.1
         with:
-          images: ${{ env.GHCR_REPO }}
+          images: ${{ steps.repo_slug.outputs.result }}
           tags: |
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') && !contains(github.ref, '-') }}
             type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
@@ -60,7 +66,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,"name=${{ env.GHCR_REPO }}",push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,"name=${{ steps.repo_slug.outputs.result }}:latest",push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ matrix.platform_tag }}
           cache-to: type=gha,scope=build-${{ matrix.platform_tag }},mode=max
 
@@ -82,6 +88,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Format repo slug
+        uses: actions/github-script@v4
+        id: repo_slug
+        with:
+          result-encoding: string
+          script: return `ghcr.io/${github.repository.toLowerCase()}`
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -113,8 +125,8 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
+            $(printf '${{ steps.repo_slug.outputs.result }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.GHCR_REPO }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ steps.repo_slug.outputs.result }}:${{ steps.meta.outputs.version }}
