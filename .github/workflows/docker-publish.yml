@@ -8,8 +8,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  GHCR_REPO: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: "vldf/telegram-files"
+  GHCR_REPO: "ghcr.io/vldf/telegram-files"
 
 permissions:
   contents: read
