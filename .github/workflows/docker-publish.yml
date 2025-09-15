@@ -8,8 +8,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: "vldf/telegram-files"
-  GHCR_REPO: "ghcr.io/vldf/telegram-files"
 
 permissions:
   contents: read
@@ -26,6 +24,10 @@ jobs:
             platform: linux/amd64
             platform_tag: linux-amd64
     steps:
+      - name: Set lowercase image name
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/telegram-files" >> $GITHUB_ENV
+          echo "TAG=latest" >> $GITHUB_ENV
       - name: Checkout repository
         uses: actions/checkout@v4
 
