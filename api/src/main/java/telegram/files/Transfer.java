@@ -4,12 +4,29 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.log.Log;
 import cn.hutool.log.LogFactory;
+import org.apache.commons.imaging.Imaging;
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata;
+import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter;
+import org.apache.commons.imaging.formats.tiff.TiffImageMetadata;
+import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
+import org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants;
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
 import telegram.files.repository.FileRecord;
 import telegram.files.repository.SettingAutoRecords;
 
-import java.io.File;
+import java.io.*;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.FileTime;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public abstract class Transfer {
@@ -93,7 +110,11 @@ public abstract class Transfer {
                 }
             }
 
-            FileUtil.move(Path.of(fileRecord.localPath()), Path.of(transferPath), isOverwrite);
+            Path targetPath = Path.of(transferPath);
+            FileUtil.move(Path.of(fileRecord.localPath()), targetPath, isOverwrite);
+
+            updateFileDateTime(targetPath, fileRecord.date());
+
             log.info("Transfer file {} to {}, duplication policy: {} overwrite: {}", fileRecord.id(), transferPath, duplicationPolicy, isOverwrite);
 
             transferStatusUpdated.accept(new TransferStatusUpdated(fileRecord, FileRecord.TransferStatus.completed, transferPath));
@@ -102,6 +123,82 @@ public abstract class Transfer {
             transferStatusUpdated.accept(new TransferStatusUpdated(fileRecord, FileRecord.TransferStatus.error, null));
         } finally {
             transferRecord = null;
+        }
+    }
+
+    private void updateFileDateTime(Path filePath, int timestamp) {
+        File file = filePath.toFile();
+        if (file.getAbsolutePath().toLowerCase().endsWith(".jpg")) {
+            setJpgDateTime(file, timestamp);
+        }
+
+        try {
+            File tmpFile = File.createTempFile("telegram-file", null);
+            Path tmpFilePath = tmpFile.toPath();
+            Files.move(filePath, tmpFilePath, StandardCopyOption.REPLACE_EXISTING);
+
+            try {
+                setFileDateTime(tmpFilePath, timestamp);
+                try {
+                    Files.move(tmpFilePath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (AtomicMoveNotSupportedException ignored) {
+                    Files.move(tmpFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                setFileDateTime(filePath, timestamp);
+            } finally {
+                boolean ignored = tmpFile.delete();
+            }
+        } catch (IOException e) {
+            setFileDateTime(filePath, timestamp);
+        }
+    }
+
+    private static void setFileDateTime(Path filePath, int timestamp) {
+        try {
+            BasicFileAttributeView attributes = Files.getFileAttributeView(filePath, BasicFileAttributeView.class);
+            FileTime time = FileTime.from(timestamp, TimeUnit.SECONDS);
+            attributes.setTimes(time, time, time);
+        } catch (IOException e) {
+            // do nothing
+        }
+    }
+
+    private void setJpgDateTime(File file, int timestamp) {
+        try {
+            JpegImageMetadata jpegMetadata = (JpegImageMetadata) Imaging.getMetadata(file);
+            TiffOutputSet outputSet = null;
+            if (jpegMetadata != null) {
+                TiffImageMetadata exif = jpegMetadata.getExif();
+                if (exif != null) {
+                    outputSet = exif.getOutputSet();
+                }
+            }
+
+            if (outputSet == null) {
+                outputSet = new TiffOutputSet();
+            }
+
+            TiffOutputDirectory exifDir = outputSet.getOrCreateExifDirectory();
+            exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL);
+            String exifDate = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss").format(Date.from(Instant.ofEpochSecond(timestamp)));
+            exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, exifDate);
+
+            TiffOutputDirectory rootDir = outputSet.getOrCreateRootDirectory();
+
+            rootDir.removeField(TiffTagConstants.TIFF_TAG_DATE_TIME);
+            rootDir.add(TiffTagConstants.TIFF_TAG_DATE_TIME, exifDate);
+
+            File tempFile = new File(file.getAbsolutePath() + ".tmp");
+            try (OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+                new ExifRewriter().updateExifMetadataLossless(file, os, outputSet);
+            }
+
+            if (!file.delete() || !tempFile.renameTo(file)) {
+                log.error("Could not replace original file with updated EXIF");
+            }
+        } catch (IOException e) {
+            log.error(e, "can't set JPG datetime");
         }
     }
 
